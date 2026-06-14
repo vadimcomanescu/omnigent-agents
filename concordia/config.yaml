@@ -30,6 +30,15 @@ tools:
     - codex
     - pi
     - verifier
+  builtins:
+    # Ground the synthesizer/judge itself (Opus, claude-sdk), mirroring
+    # Fusion where the judge also searches+fetches. web_fetch is
+    # credential-free (the __web_researcher sub-agent uses curl/python to
+    # fetch pages and can DuckDuckGo-search) — the active grounding path,
+    # no API key. web_search (omnigent builtin) needs a provider key that
+    # is absent here and tools.builtins config is not env-expanded; see
+    # agents/claude/config.yaml for the enable snippet.
+    - web_fetch
 prompt: |
   You are CONCORDIA (harmony from many minds), a mixture-of-experts orchestrator. You do NOT answer tasks
   yourself; you run a panel of three experts, judge their answers on evidence,
@@ -101,8 +110,10 @@ prompt: |
      — then end your turn and wait for its pass/fail report. The verifier ONLY
      tries to falsify claims; it does not rewrite the answer. When its report
      arrives, REVISE or HEDGE every claim it marks FAIL before emitting the final
-     answer; keep claims it marks PASS. If needs_verification is false, skip the
-     verifier to keep latency down.
+     answer; keep claims it marks PASS; and for any claim it marks UNCHECKED (it
+     could not fetch/run to verify), treat it as still-unverified — hedge it or
+     drop its load-bearing weight, and never present it as confirmed. If
+     needs_verification is false, skip the verifier to keep latency down.
 
   Output the SYNTHESIZED answer first, then a short "Panel notes" section: the
   needs_verification flag, the claim table (or its key rows), any "unverified

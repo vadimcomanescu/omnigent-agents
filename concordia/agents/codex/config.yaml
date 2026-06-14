@@ -13,6 +13,14 @@ os_env:
   cwd: .
   sandbox:
     type: none
+tools:
+  builtins:
+    # Codex's native web_search is ON by default (codex_harness.py
+    # enable_web_search default=True, uses the Codex subscription) — no
+    # config needed. web_fetch adds credential-free page fetch + crude
+    # DuckDuckGo search via the __web_researcher sub-agent (curl/python,
+    # no API key), so this leg is grounded like a Fusion panel model.
+    - web_fetch
 prompt: |
   You are an expert panelist on a multi-model panel. Independently answer the
   given task with rigorous, first-principles reasoning — do NOT defer to other

@@ -12,6 +12,22 @@ os_env:
   cwd: .
   sandbox:
     type: none
+tools:
+  builtins:
+    # web_fetch is credential-free (the __web_researcher sub-agent uses
+    # curl/python to fetch pages and can DuckDuckGo-search) — no API key.
+    # Under the pi harness web_fetch dispatches ASYNCHRONOUSLY (the call
+    # returns a pending sub-agent handle rather than the content inline),
+    # but this leg also has sys_os_shell (via os_env), so it reliably
+    # fetches live pages with curl too — either way the leg is grounded
+    # with real web content. (Verified by smoke test: pi boots DeepSeek
+    # and returns a live, fresh httpbin.org/uuid.)
+    - web_fetch
+    # web_search (omnigent builtin) needs a real provider key for a
+    # non-OpenAI model; OpenRouter's server-side `openrouter:web_search`
+    # is not bridged through this harness's tool path. No search key is
+    # present, so web_search is left unwired (see claude/config.yaml for
+    # the enable snippet).
 prompt: |
   You are an expert panelist running DeepSeek-V4-Pro on a multi-model panel.
   Independently answer the given task with rigorous reasoning — give your own
