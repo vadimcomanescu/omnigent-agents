@@ -9,13 +9,13 @@ or pull this repo on any device to get the same teams.
 
 | Team | What it's for |
 |------|---------------|
-| [`moe-panel`](./moe-panel) | **Mixture-of-experts panel.** Asks one question, in parallel, to Claude Opus 4.8 + GPT-5.5 + DeepSeek-V4-Pro, then a fixed Opus-4.8 synthesizer blinds the drafts, builds an evidence-weighted claim table, flags "unverified consensus", runs a gated different-vendor verifier, and returns one cross-checked answer. For hard reasoning / research / high-stakes questions where one model isn't enough. |
+| [`concordia`](./concordia) | **Concordia — mixture-of-experts panel.** Asks one question, in parallel, to Claude Opus 4.8 + GPT-5.5 + DeepSeek-V4-Pro, then a fixed Opus-4.8 synthesizer blinds the drafts, builds an evidence-weighted claim table, flags "unverified consensus", runs a gated different-vendor verifier, and returns one cross-checked answer. For hard reasoning / research / high-stakes questions where one model isn't enough. |
 
 ## Layout
 
 ```
 omnigent-agents/
-├── moe-panel/        # config.yaml + agents/<name>/config.yaml + its own README
+├── concordia/        # config.yaml + agents/<name>/config.yaml + its own README
 └── README.md
 ```
 
@@ -29,7 +29,7 @@ are independent by design — shared pieces are copied, not linked.
 git clone https://github.com/vadimcomanescu/omnigent-agents
 cd omnigent-agents
 omnigent setup            # one-time per machine: log in per harness (claude / codex / pi)
-omnigent run moe-panel/   # launch a team by path
+omnigent run concordia/   # launch a team by path
 ```
 
 See each team's own README for team-specific prerequisites.
@@ -42,14 +42,14 @@ update), then `omnigent run <team>/`.
 What git does **not** carry — set up once per machine:
 - Each harness's CLI + login (`omnigent setup`); auth tokens are local
   (`~/.omnigent/auth_tokens.json`), not synced.
-- Model access / credits for whatever a team pins (e.g. `moe-panel` needs Claude
+- Model access / credits for whatever a team pins (e.g. `concordia` needs Claude
   Opus 4.8, GPT-5.5, and OpenRouter DeepSeek-V4-Pro **with credits**).
-- Any stopgap patch a team documents (e.g. `moe-panel`'s pi leg needs omnigent
-  PR #48 until it merges — see `moe-panel/README.md`).
+- Any stopgap patch a team documents (e.g. `concordia`'s pi leg needs omnigent
+  PR #48 until it merges — see `concordia/README.md`).
 
 Optional "launch by name from any device + roaming sessions": run one
 self-hosted omnigent server and pre-register every team at startup —
-`omnigent server start --agent moe-panel/ --agent <next-team>/ ...` — then
+`omnigent server start --agent concordia/ --agent <next-team>/ ...` — then
 `omnigent login <url>` + `omnigent run --server <url> <agent>` from any device.
 The server centralizes definitions + sessions, not execution: harnesses still
 run on whichever machine hosts, so the per-device setup above still applies.

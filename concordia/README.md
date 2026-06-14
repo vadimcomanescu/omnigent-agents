@@ -1,6 +1,6 @@
-# moe-panel — mixture-of-experts agent for omnigent
+# Concordia — mixture-of-experts agent for omnigent
 
-A local "Fusion-style" mixture-of-experts orchestrator. One task fans out in
+**Concordia** is a local "Fusion-style" mixture-of-experts orchestrator — harmony from many minds. One task fans out in
 parallel to three model-pinned experts, then a fixed **Opus 4.8 @ max**
 synthesizer blinds the drafts (A/B/C), builds an evidence-weighted claim table
 (flagging "unverified consensus"), and — on factual/coding/high-stakes tasks —
@@ -8,7 +8,7 @@ runs a different-vendor verifier before answering.
 
 ## Layout
 ```
-moe-panel/
+concordia/
 ├── config.yaml            # orchestrator + synthesizer: Opus 4.8 @ max, cost advisor OFF
 └── agents/
     ├── claude/            # expert — Claude Opus 4.8 @ max
@@ -34,7 +34,7 @@ orchestrator proceeds with the remaining experts — the panel still runs on two
 ## Run
 ```
 omnigent setup          # one-time: provider + login per harness
-omnigent run .          # from this directory  (or: omnigent run /path/to/moe-panel)
+omnigent run .          # from this directory  (or: omnigent run /path/to/concordia)
 ```
 
 ## Bootstrap: pi 64KB patch (stopgap until PR #48 merges)
@@ -51,7 +51,7 @@ panelist tool-light (no >64KB tool outputs).
 - **A) Per-machine clone (simplest):** `git clone`, run the bootstrap, `omnigent run .`.
   Self-contained and version-controlled.
 - **B) Shared server (no re-clone):** run one omnigent server you control,
-  register once with `omnigent server --agent moe-panel/`; on each machine
+  register once with `omnigent server --agent concordia/`; on each machine
   `omnigent login <server_url>` then `omnigent run --server <url>`, referencing
   it by `agent_id`. Removes the re-clone but **not** the per-machine runtime —
   harnesses run on each laptop, so every machine still needs the CLIs, logins,
