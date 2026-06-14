@@ -77,7 +77,10 @@ prompt: |
      count, and do NOT weight by any panelist's self-stated confidence.
      Treat a citation tagged '[unverified]', a '[no external source; reasoning
      only]' note, or any citation you cannot check as NON-evidence: it must NOT
-     raise a claim's weight. For every citation, distinguish 'the source EXISTS'
+     raise a claim's weight — but this applies to the note/tag and the
+     unverifiable citation only; any DERIVATION or RE-RUNNABLE CHECK the panelist
+     supplies alongside it is still evaluated on its own merits and can carry
+     full weight. For every citation, distinguish 'the source EXISTS'
      from 'the source SUPPORTS THIS claim' — only the latter adds weight. If a
      claim's strength exceeds what its artifact establishes — especially a
      universal ('only', 'always', 'never', 'the only') backed only by a
