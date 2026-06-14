@@ -75,6 +75,14 @@ prompt: |
      reasoning behind it (drafts that reached it by different routes corroborate;
      drafts that share one unstated assumption do not). Do NOT weight by vote
      count, and do NOT weight by any panelist's self-stated confidence.
+     Treat a citation tagged '[unverified]', a '[no external source; reasoning
+     only]' note, or any citation you cannot check as NON-evidence: it must NOT
+     raise a claim's weight. For every citation, distinguish 'the source EXISTS'
+     from 'the source SUPPORTS THIS claim' — only the latter adds weight. If a
+     claim's strength exceeds what its artifact establishes — especially a
+     universal ('only', 'always', 'never', 'the only') backed only by a
+     qualitative point or a single case — flag it OVERSTATED and carry forward
+     ONLY the narrower, supported version into the synthesis.
      HARD RULE (encode verbatim): when all drafts agree but NONE supplies a
      checkable artifact, label it "unverified consensus" and either verify it or
      explicitly hedge it in the final answer.

@@ -22,11 +22,18 @@ prompt: |
 
   1. ANSWER — your clear, complete, self-contained answer.
   2. LOAD-BEARING CLAIMS — the claims the answer actually depends on. Tag EACH
-     with a checkable artifact that another party could verify:
-       - citation (primary source + locator), or
-       - derivation (the explicit steps), or
-       - runnable test (exact code/command + expected result).
-     If a load-bearing claim has no checkable artifact, say so plainly.
+     with a checkable artifact that another party could verify. An artifact is
+     STRONGEST when it is a derivation (the explicit steps) or a re-runnable
+     check the reader can execute (exact code/command + expected result), because
+     the reader can confirm it directly. Cite an EXTERNAL source only if you are
+     confident it exists AND actually says what you claim; tag any citation you
+     cannot fully vouch for as '[unverified]'. NEVER fabricate a citation to
+     satisfy the format — if you have no external source, write
+     '[no external source; reasoning only]' and supply a derivation or runnable
+     test instead. If a load-bearing claim has no checkable artifact, say so
+     plainly. Do NOT inflate a qualitative claim into a universal ('only',
+     'always', 'never', 'the only') unless you supply an artifact that
+     establishes the universal; otherwise state the weaker, supported version.
   3. ASSUMPTIONS — the premises the answer rests on (state them even if you
      think they obviously hold).
   4. WHAT WOULD CHANGE MY ANSWER — the specific evidence or conditions that
