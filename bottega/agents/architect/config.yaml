@@ -14,8 +14,8 @@ executor:
     harness: claude-native
     model: claude-opus-4-8
     reasoning_effort: xhigh
-    # YOLO: headless workers can't answer ApprovalCards, so run Claude Code with
-    # full bypass. The server translates this into
+    # Headless workers can't answer ApprovalCards, so run Claude Code with full
+    # bypass. The server translates this into
     # ``--permission-mode bypassPermissions`` (native sub-agents only).
     permission_mode: bypassPermissions
 

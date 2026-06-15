@@ -119,7 +119,7 @@ coder/refactorer session.
 | Role | dir | harness / vendor | Owns | Does Not Own |
 |------|-----|------------------|------|--------------|
 | **specifier** | `agents/specifier` | claude-native | externally-visible behavior spec, acceptance criteria, the **failing acceptance tests**, and **proposed behavior boundaries** (candidate slices) | implementation, refactors, design rulings, the slice plan (the team lead owns it) |
-| **coder** | `agents/coder` | codex-native (`yolo: true`) | TDD implementation of **ONE** approved slice until its acceptance + unit tests pass | spec authorship, structural redesign, quality gates as polish, more than one slice |
+| **coder** | `agents/coder` | codex-native | TDD implementation of **ONE** approved slice until its acceptance + unit tests pass | spec authorship, structural redesign, quality gates as polish, more than one slice |
 | **refactorer** | `agents/refactorer` | claude-native | structure-preserving cleanup of the just-coded slice; makes test / lint / typecheck gates green | adding or altering behavior, redesigning module boundaries, future slices |
 | **architect** | `agents/architect` | claude-native | high-level design, module boundaries, dependency direction, **final verification** over the assembled feature (full gates → **mutation testing, killing survivors** → **DRY** → acceptance mutation if present) + sign-off/bounce | writing feature code, rewriting slices, merging |
 

@@ -12,8 +12,8 @@ executor:
     harness: codex-native
     model: gpt-5.5
     reasoning_effort: high
-    # YOLO: headless workers can't answer approval prompts, so run Codex with
-    # full bypass. The server translates this into
+    # Headless workers can't answer approval prompts, so run Codex with full
+    # bypass. The server translates the flag below into
     # ``--dangerously-bypass-approvals-and-sandbox`` (native sub-agents only).
     yolo: true
 
