@@ -30,7 +30,7 @@ integration path:
   integration HEAD first. (registry `status: ready`.)
 - **PENDING** — a producer is not yet DONE. Blocked; not in the ready set until its
   producers merge. (registry `status: pending`.)
-- **IN-FLIGHT** — dispatched and running in the live session, no commit yet. A
+- **IN-FLIGHT** — dispatched and running in a live role-session, no commit yet. A
   live-run state only; on RESUME it is NOT trusted — reclassify from git: a commit
   on the branch -> AWAITING-INTEGRATION, otherwise -> READY. (registry
   `status: in-flight`.)
@@ -105,11 +105,16 @@ with the slice state model above, then:
   .bottega/wt/<id> -b slice/<id> <integration-HEAD-sha>`). Record each slice's
   worktree path, branch, and base SHA in the registry, and confirm
   `git -C <wt> rev-parse HEAD` equals the recorded integration HEAD.
-- **Dispatch fresh sessions K-wide in parallel**, one per ready slice, each
-  running **run-slice-pipeline** for its slice. Each session gets only its
-  slice's handoff packet (see run-slice-pipeline) — never a sibling's session or
-  diff. Mark each dispatched slice IN-FLIGHT, record its `conversation_id` +
-  title, and PERSIST before ending the turn.
+- **Run K slices' pipelines in parallel** — one **run-slice-pipeline** per ready
+  slice, up to K. This does NOT mean one worker session runs all three roles: a
+  slice's run-slice-pipeline is the COORDINATOR's 3-role dispatch SEQUENCE for that
+  slice — specifier, then coder, then refactorer, each a SEPARATE session, with a
+  handback to you between each (see run-slice-pipeline). The K-parallelism is ACROSS
+  slices (K slices' pipelines advancing at once), never multiple roles in one
+  session. Each session gets only its slice's handoff packet — never a sibling's
+  session or diff. Mark each in-flight slice IN-FLIGHT, record its PER-ROLE
+  `conversation_id`s + titles as each role is dispatched, and PERSIST before ending
+  the turn.
 - **Wait** for the wave's sessions to finish (the inbox wakes you; never
   busy-poll). A slice that hands back a commit becomes AWAITING-INTEGRATION.
 - **Call integrate-wave** to dup-scan, merge each AWAITING-INTEGRATION `slice/*`
@@ -128,8 +133,9 @@ handbacks. That is the whole primitive, and it lives here — there is no separa
 fan-out skill to borrow it from.
 
 ## Invariants
-- Fresh session ACROSS slices; the same session is only ever continued for
-  feedback on the SAME slice it already owns.
+- Fresh role-sessions ACROSS slices; a role-session is only ever continued for
+  feedback on the SAME slice + SAME role it already owns. One session never spans
+  specifier + coder + refactorer — those are three separate sessions per slice.
 - Parallel only across INDEPENDENT slices — slices with NO edge either way. An
   edge always serializes; `touches` overlap never does (it is a merge cost
   integrate-wave handles).
