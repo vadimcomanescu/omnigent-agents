@@ -7,12 +7,51 @@ description: Load ONCE as the coordinator's orchestration loop after the DAG is 
 
 This is the coordinator's main loop after the plan gate. It walks the DAG from
 the spine outward, running INDEPENDENT slices in parallel and serializing only
-where a real edge demands it.
+where a real edge demands it. The loop is RESUMABLE: its state lives in a durable
+file, so an interrupted or crashed run picks up where it left off rather than
+restarting.
 
-## 1. Create the integration branch
-One branch carries the whole feature. Branch it off the agreed base commit and
-record it as the integration branch + integration HEAD in the registry. Every
-wave branches its slice worktrees off the CURRENT integration HEAD.
+## 0. Load or init the registry (resume, not restart)
+The registry is DURABLE: it lives in a scratch file in the TARGET repo at
+`.bottega/<feature-slug>.json`, not only in your context. On every (re)start, load
+it or initialize it BEFORE touching branches or dispatching:
+- If the scratch file is ABSENT, this is a fresh run. Initialize the registry with
+  the approved plan/DAG + spine tags, and ensure the target repo IGNORES the
+  scratch dir — add a `.bottega/` line to the target repo's `.gitignore` if it
+  isn't already there. The `.bottega/` dir is runtime state (the registry plus the
+  `.bottega/wt/<id>` worktrees), never part of the PR.
+- If the scratch file is PRESENT, a prior run was interrupted. RECONCILE it
+  against git ground truth before doing anything else:
+    - the integration branch's real HEAD (`git rev-parse`),
+    - which `slice/*` branches and `.bottega/wt/<id>` worktrees actually exist,
+    - which slices are already merged into the integration branch
+      (`git branch --merged <integration-branch>` / `git log`).
+  Rewrite each slice's status from what git actually shows (a slice whose branch is
+  already merged is `merged`/`done`; one whose branch exists but isn't merged is
+  in-flight; one with no branch is back in `pending`), then RESUME the wave loop
+  from the recomputed ready set — never restart from zero.
+- Reconcile stale worktrees/branches left by the dead run: REUSE a worktree/branch
+  whose commit matches the registry's recorded SHA; REBUILD it (remove the
+  worktree, re-add it off the current integration HEAD) when its commit has drifted
+  or its worktree is missing. A slice recorded in-flight whose branch never
+  received a commit returns to the ready set for a fresh dispatch.
+
+## Persist after every transition
+The registry is the team's long-horizon memory; you write no code and must not
+hold build state only in your own context. WRITE `.bottega/<feature-slug>.json`
+after EVERY state transition — a slice dispatched, a wave integrated, a slice
+merged, a bounce routed, the architect's sign-off — so any restart recovers by
+re-reading it. Each slice entry carries its {session conversation_id, worktree,
+branch, base SHA, status, changed_files, handbacks[]} alongside the plan/DAG +
+spine tags (the coordinator's registry schema). For recovery, a transition that
+wasn't persisted didn't happen — persist it before you end the turn.
+
+## 1. Create or adopt the integration branch
+One branch carries the whole feature. On a fresh run, branch it off the agreed
+base commit and record it as the integration branch + integration HEAD in the
+registry; on a resume, ADOPT the existing branch at its reconciled HEAD rather
+than recreating it. Every wave branches its slice worktrees off the CURRENT
+integration HEAD.
 
 ## 2. Spine first (sequential)
 Land the spine slices onto the integration branch ONE at a time, before any wave.
@@ -34,12 +73,14 @@ Repeat until the DAG drains:
 - **Dispatch fresh sessions K-wide in parallel**, one per ready slice, each
   running **run-slice-pipeline** for its slice. Each session gets only its
   slice's handoff packet (see run-slice-pipeline) — never a sibling's session or
-  diff. Record each dispatch's `conversation_id` + title.
+  diff. Record each dispatch's `conversation_id` + title in the registry and
+  PERSIST before ending the turn.
 - **Wait** for the wave's sessions to finish (the inbox wakes you; never
   busy-poll).
 - **Call integrate-wave** to dup-scan, merge each `slice/*` branch into the
   integration branch one at a time, and re-green the gates. This advances the
-  integration HEAD.
+  integration HEAD. Record each slice's `merged` status + `changed_files` and the
+  new integration HEAD, and PERSIST.
 - **Recompute the ready set** off the fresh HEAD and loop.
 
 ## 4. Finish
