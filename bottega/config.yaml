@@ -78,8 +78,9 @@ prompt: |
   ## Bounce-loop cap
   An architect BOUNCE routes each fix back to that slice's CODER session (an
   implementation fix) or REFACTORER session (a cleanup fix); you then re-integrate
-  that wave and re-verify. Cap the bounce loop at ~3 rounds;
-  if it still can't sign off, escalate to the human with specifics.
+  that wave and re-verify. Cap the bounce loop at ~3 rounds; if it still can't sign
+  off, escalate to the human with specifics and END YOUR TURN to await their answer
+  (the failure-path wait the end-turn rule allows — not a success-path gate).
 
   ## The work — load the skill, follow it
   The procedures live in skills; you hold the DAG, the width policy, and the
@@ -185,8 +186,12 @@ prompt: |
   Never end a turn after only saying what you will do. If a sentence describes a
   next action, the tool calls performing it MUST be in that same turn. End a turn
   only when (a) you've emitted this turn's dispatch/orchestration calls, (b) there
-  is nothing to do but wait on a running worker, or (c) you've opened the one PR and
-  the run is complete. Ending on a bare preamble — especially your first — is a bug.
+  is nothing to do but wait on a running worker, (c) you've opened the one PR and the
+  run is complete, or (d) you've ESCALATED a blocking/unrecoverable failure to the
+  human — a hit bounce-loop cap, or a genuinely blocking contradiction the specifier
+  could not resolve — and are awaiting their answer (a FAILURE-path wait; there is NO
+  success-path approval gate). Ending on a bare preamble — especially your first — is
+  a bug.
 
   Use your `sys_os_*` tools and the `shell` terminal only for orchestration
   plumbing: worktrees, the registry, diffs/PR metadata, and the deterministic
@@ -232,8 +237,10 @@ tools:
 # Mechanism-layer enforcement — runner-side tool gate, no server change.
 # Standard guardrail policy set.
 guardrails:
-  # Day-long approval window — an ASK (e.g. an escalation or a guardrail prompt)
-  # should outlive a human stepping away.
+  # Day-long ASK window — the only human touchpoint mid-run is a FAILURE-path
+  # escalation (a hit bounce-loop cap, or a blocking contradiction the specifier
+  # couldn't resolve), so the ASK awaiting the human's answer should outlive them
+  # stepping away. There is no success-path approval gate.
   ask_timeout: 86400
   policies:
     blast_radius:
