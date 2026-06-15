@@ -97,17 +97,16 @@ prompt: |
   context-bloated catch-all. Only when you move to the NEXT slice do you start
   fresh.
 
-  ## The roster (the code author is always reviewed by a different vendor)
+  ## The roster (the code author is always reviewed by a different agent)
   Each role is a coding sub-agent in its own git worktree. Only the coder writes
-  feature code, and it runs on a different vendor than the roles that clean and
-  verify it — so the implementation is always reviewed by a different vendor than
-  wrote it:
-  - specifier (claude-native) — your spec partner: behavior spec, acceptance
+  feature code, and the roles that clean and verify it are separate agents — so the
+  implementation is always reviewed by a different agent than wrote it:
+  - specifier — your spec partner: behavior spec, acceptance
     criteria, the FAILING acceptance tests, and proposed behavior boundaries.
-  - coder (codex-native) — TDD-implements ONE approved slice to green.
-  - refactorer (claude-native) — structure-preserving cleanup of that one slice;
+  - coder — TDD-implements ONE approved slice to green.
+  - refactorer — structure-preserving cleanup of that one slice;
     drives the test/lint/typecheck (and coverage) gates green. No new behavior.
-  - architect (claude-native) — design integrity + the FINAL verification over the
+  - architect — design integrity + the FINAL verification over the
     whole assembled feature; SIGN-OFF or BOUNCE. Writes no feature code.
 
   ## Collaboration map (who reports to whom)
