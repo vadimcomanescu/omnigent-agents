@@ -11,6 +11,30 @@ where a real edge demands it. The loop is RESUMABLE: its state lives in a durabl
 file, so an interrupted or crashed run picks up where it left off rather than
 restarting.
 
+## Slice states (one model — the resume step and the ready set share it)
+Every slice is in exactly ONE state, decided from GIT ground truth, not from trust
+in the recorded status. Both the resume step (0) and the wave loop (3) use these
+exact definitions, so a slice can never be double-dispatched or left stuck with no
+integration path:
+- **DONE** — the slice's commit is merged into the integration branch
+  (`git branch --merged <integration-branch>`). Terminal; EXCLUDED from the ready
+  set; never re-dispatched. (registry `status: merged`, then `done` once the whole
+  DAG signs off.)
+- **AWAITING-INTEGRATION** — `slice/<id>` has a worker commit that is NOT yet in
+  the integration branch. It goes STRAIGHT to integrate-wave to be merged; it is
+  NOT in the ready set and is NEVER re-dispatched. (registry
+  `status: awaiting-integration`.)
+- **READY** — every producer is DONE and the slice has NO commit yet (its branch
+  is missing, or its worktree/branch exists with no commit on it). It is in the
+  READY SET for (re)dispatch; rebuild a drifted or empty worktree off the current
+  integration HEAD first. (registry `status: ready`.)
+- **PENDING** — a producer is not yet DONE. Blocked; not in the ready set until its
+  producers merge. (registry `status: pending`.)
+- **IN-FLIGHT** — dispatched and running in the live session, no commit yet. A
+  live-run state only; on RESUME it is NOT trusted — reclassify from git: a commit
+  on the branch -> AWAITING-INTEGRATION, otherwise -> READY. (registry
+  `status: in-flight`.)
+
 ## 0. Load or init the registry (resume, not restart)
 The registry is DURABLE: it lives in a scratch file in the TARGET repo at
 `.bottega/<feature-slug>.json`, not only in your context. On every (re)start, load
@@ -20,21 +44,26 @@ it or initialize it BEFORE touching branches or dispatching:
   scratch dir — add a `.bottega/` line to the target repo's `.gitignore` if it
   isn't already there. The `.bottega/` dir is runtime state (the registry plus the
   `.bottega/wt/<id>` worktrees), never part of the PR.
-- If the scratch file is PRESENT, a prior run was interrupted. RECONCILE it
-  against git ground truth before doing anything else:
+- If the scratch file is PRESENT, a prior run was interrupted. Do NOT trust the
+  recorded statuses — RECLASSIFY every slice from git ground truth using the slice
+  state model above. Read:
     - the integration branch's real HEAD (`git rev-parse`),
-    - which `slice/*` branches and `.bottega/wt/<id>` worktrees actually exist,
+    - which `slice/*` branches and `.bottega/wt/<id>` worktrees actually exist and
+      whether each branch carries a commit past its base SHA,
     - which slices are already merged into the integration branch
       (`git branch --merged <integration-branch>` / `git log`).
-  Rewrite each slice's status from what git actually shows (a slice whose branch is
-  already merged is `merged`/`done`; one whose branch exists but isn't merged is
-  in-flight; one with no branch is back in `pending`), then RESUME the wave loop
-  from the recomputed ready set — never restart from zero.
+  Map each slice to exactly one state: merged -> DONE; a commit on `slice/<id>`
+  not yet merged -> AWAITING-INTEGRATION; producers all DONE but no commit
+  (branch missing, or worktree/branch present with no commit) -> READY; a producer
+  not yet DONE -> PENDING. Write the reclassified statuses back, then RESUME the
+  wave loop — never restart from zero, and never re-dispatch a slice that already
+  has a commit.
 - Reconcile stale worktrees/branches left by the dead run: REUSE a worktree/branch
   whose commit matches the registry's recorded SHA; REBUILD it (remove the
   worktree, re-add it off the current integration HEAD) when its commit has drifted
-  or its worktree is missing. A slice recorded in-flight whose branch never
-  received a commit returns to the ready set for a fresh dispatch.
+  or its worktree is missing. A slice with a committed branch stays
+  AWAITING-INTEGRATION (it is integrated, not re-dispatched); only a slice with no
+  commit returns to READY.
 
 ## Persist after every transition
 The registry is the team's long-horizon memory; you write no code and must not
@@ -62,9 +91,15 @@ implementation proceeds in parallel later. Re-green the gates after each spine
 landing; advance the integration HEAD.
 
 ## 3. The wave loop
-Repeat until the DAG drains:
-- **Ready set** = every not-yet-done slice whose producers are ALL merged into
-  the integration branch.
+Repeat until the DAG drains. Each pass starts by CLASSIFYING every not-DONE slice
+with the slice state model above, then:
+- **Integrate first.** Any AWAITING-INTEGRATION slice — a committed `slice/*`
+  branch not yet merged, e.g. one that finished just before a crash — goes
+  STRAIGHT to **integrate-wave**; it is NOT spun up or re-dispatched.
+- **Ready set** = every READY slice: producers ALL merged into the integration
+  branch (DONE) and no commit on its branch yet. DONE, AWAITING-INTEGRATION,
+  IN-FLIGHT, and PENDING slices are EXCLUDED from the ready set — so a slice with a
+  commit is never re-dispatched and a blocked slice never runs early.
 - **Spin a worktree per ready slice off the current integration HEAD**, up to the
   width the coordinator's policy allows (`git -C <target> worktree add
   .bottega/wt/<id> -b slice/<id> <integration-HEAD-sha>`). Record each slice's
@@ -73,15 +108,15 @@ Repeat until the DAG drains:
 - **Dispatch fresh sessions K-wide in parallel**, one per ready slice, each
   running **run-slice-pipeline** for its slice. Each session gets only its
   slice's handoff packet (see run-slice-pipeline) — never a sibling's session or
-  diff. Record each dispatch's `conversation_id` + title in the registry and
-  PERSIST before ending the turn.
+  diff. Mark each dispatched slice IN-FLIGHT, record its `conversation_id` +
+  title, and PERSIST before ending the turn.
 - **Wait** for the wave's sessions to finish (the inbox wakes you; never
-  busy-poll).
-- **Call integrate-wave** to dup-scan, merge each `slice/*` branch into the
-  integration branch one at a time, and re-green the gates. This advances the
-  integration HEAD. Record each slice's `merged` status + `changed_files` and the
-  new integration HEAD, and PERSIST.
-- **Recompute the ready set** off the fresh HEAD and loop.
+  busy-poll). A slice that hands back a commit becomes AWAITING-INTEGRATION.
+- **Call integrate-wave** to dup-scan, merge each AWAITING-INTEGRATION `slice/*`
+  branch into the integration branch one at a time, and re-green the gates. This
+  advances the integration HEAD. Mark each merged slice DONE, record its
+  `changed_files` and the new integration HEAD, and PERSIST.
+- **Recompute** off the fresh HEAD and loop.
 
 ## 4. Finish
 When the DAG has drained — every slice merged into the integration branch — call
