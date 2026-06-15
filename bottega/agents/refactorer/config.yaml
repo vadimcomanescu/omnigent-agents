@@ -13,7 +13,8 @@ executor:
     model: claude-sonnet-4-6
     reasoning_effort: medium
     # YOLO: headless workers can't answer ApprovalCards, so run Claude Code with
-    # full bypass (server -> ``--permission-mode bypassPermissions``).
+    # full bypass. The server translates this into
+    # ``--permission-mode bypassPermissions`` (native sub-agents only).
     permission_mode: bypassPermissions
 
 prompt: |
@@ -83,7 +84,7 @@ os_env:
   sandbox:
     type: none
 
-# Commits + pushes allowed (gate_pushes: false); only the catastrophic set
+# Commits + pushes are allowed (gate_pushes: false); only the catastrophic set
 # (force-push, rm -rf /, hard-reset to a remote ref) is denied.
 guardrails:
   policies:

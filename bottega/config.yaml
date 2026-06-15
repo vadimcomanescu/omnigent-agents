@@ -10,9 +10,15 @@ description: >-
   own session, so no worker accumulates cross-slice context. The coordinator
   holds all long-horizon memory in its registry, writes no code, and never merges.
 
-# Coordinator "brain": the Claude Agent SDK — this is polly acting as team lead.
-# It writes no code: it decomposes, dispatches, tracks the registry, routes
-# feedback, and runs deterministic gates. Model + reasoning pinned explicitly.
+# No spawn: true. The fixed four-role roster is declared under tools.agents, and
+# a FRESH worker session per slice is obtained by giving sys_session_send a NEW
+# title each slice (a new (agent, title) pair spawns a clean session; reusing a
+# title would continue a thread, which is exactly what we must never do). The
+# team lead never needs sys_session_create, so spawn stays off.
+
+# Team lead "brain": Claude Agent SDK. The team lead writes no code itself — it
+# decomposes, dispatches, tracks the registry, and runs deterministic gates.
+# Model and reasoning effort are pinned explicitly below.
 executor:
   type: omnigent
   context_window: 1000000
@@ -82,9 +88,13 @@ prompt: |
   slice's OWN coder (and refactorer) session — you CONTINUE that session, because
   it still holds the slice's full context and is the agent that wrote it. Record
   each slice's coder/refactorer `conversation_id` (and title) in the registry and
-  reuse them for any fix-up on that slice. A single universal implementer cannot do
-  this; here feedback lands on the precise author of the slice it concerns, never
-  on a context-bloated catch-all. Only when you move to the NEXT slice do you start
+  reuse them for any fix-up on that slice. When you continue a session for
+  feedback, the dispatch input MUST still carry the CURRENT worktree path and the
+  expected HEAD: that slice's earlier worktree may have been removed, so even
+  though the session keeps its context it must re-cd into a freshly-added worktree
+  before touching files. A single universal implementer cannot do this; here
+  feedback lands on the precise author of the slice it concerns, never on a
+  context-bloated catch-all. Only when you move to the NEXT slice do you start
   fresh.
 
   ## The roster (two vendors; every handoff crosses vendors)
@@ -111,14 +121,15 @@ prompt: |
   Inspect the target root with your own `sys_os_*` tools:
   - `package.json` -> TypeScript/JavaScript. tests: the project's own `test`
     script, else `vitest run` / `jest`. lint: `eslint`. typecheck: `tsc --noEmit`.
-    coverage: c8 (optional). mutation: stryker (optional).
   - `pyproject.toml` / `setup.py` / `requirements.txt` -> Python. tests: `pytest`.
-    lint: `ruff` (else flake8). typecheck: `mypy` (else pyright). coverage:
-    pytest-cov (optional). mutation: mutmut (optional).
-  ALWAYS prefer the project's own configured scripts (npm/pnpm scripts, Makefile,
-  tox) over hardcoded commands; fall back to the defaults only when none are
-  declared. Record the stack + exact gate commands in the registry and pass them
-  into every dispatch — workers never re-detect.
+    lint: `ruff` (else flake8). typecheck: `mypy` (else pyright).
+  Coverage and mutation are OPTIONAL gates: include one only if the project already
+  configures it (e.g. c8 / stryker, pytest-cov / mutmut) — never require or add a
+  tool the project doesn't use. ALWAYS prefer the project's own configured scripts
+  (npm/pnpm scripts, Makefile, tox) over hardcoded commands; fall back to the
+  defaults above only when none are declared. Record the stack + exact gate
+  commands in the registry and pass them into every dispatch — workers never
+  re-detect.
 
   ## The pipeline (sequential; two human gates)
   1. SPEC (you + specifier). Dispatch the specifier (fresh session) with the
@@ -244,17 +255,20 @@ terminals:
         type: none
 
 tools:
-  # The fixed pipeline. Each name matches an agents/<name>/ directory. A fresh
-  # worker session per slice comes from a fresh title on sys_session_send (and
-  # feedback on a slice continues that slice's session) — so no spawn: true.
+  # The fixed four-role pipeline. Each name matches an agents/<name>/ directory.
+  # A fresh worker session per slice comes from a fresh title on sys_session_send,
+  # not from a new agent — so no spawn: true is needed.
   agents:
     - specifier
     - coder
     - refactorer
     - architect
 
-# Mechanism-layer enforcement — runner-side tool gate. Mirrors polly's policy set.
+# Mechanism-layer enforcement — runner-side tool gate, no server change.
+# Mirrors polly's policy set.
 guardrails:
+  # Day-long approval window — an ASK (e.g. at a human gate) should outlive a
+  # human stepping away.
   ask_timeout: 86400
   policies:
     blast_radius:
@@ -262,12 +276,17 @@ guardrails:
       function:
         path: omnigent.inner.nessie.policies.blast_radius
         arguments:
+          # Conductor runs unattended between gates; don't ASK on push (it opens
+          # the PR). The catastrophic DENY set (force-push, rm -rf /, hard-reset
+          # to a remote ref) still applies, and it never merges.
           gate_pushes: false
     spawn_bounds:
       type: function
       function:
         path: omnigent.inner.nessie.policies.spawn_bounds
         arguments:
+          # The loop dispatches one worker at a time; a small per-turn cap
+          # is plenty and keeps a runaway loop from fanning out.
           max_dispatches_per_turn: 3
           dispatch_tools: [sys_session_send]
     headless_subagent_purpose_guard:
@@ -275,4 +294,5 @@ guardrails:
       function:
         path: omnigent.inner.nessie.policies.headless_subagent_purpose_guard
         arguments:
+          # Exactly the purposes this conductor dispatches.
           allowed_purposes: [implement, review, explore]

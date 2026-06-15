@@ -48,7 +48,7 @@ slice:
                        │ dispatch (fresh session)
             ┌──────────▼───────────┐
             │ specifier (claude)   │  spec + acceptance tests (FAILING) +
-            │                      │  ordered one-shot-sized slice list
+            │                      │  proposed behavior boundaries
             └──────────┬───────────┘
                        │
          ╔═════════════▼═══════════════╗
@@ -85,7 +85,7 @@ cleaned and verified by a different vendor than wrote it.
 
 | Role | dir | harness / vendor | Owns | Does Not Own |
 |------|-----|------------------|------|--------------|
-| **specifier** | `agents/specifier` | claude-native | externally-visible behavior spec, acceptance criteria / Gherkin, the **failing acceptance tests**, and the **ordered slice decomposition** (one-shot-sized slices) | implementation, refactors, design rulings, doing the slices |
+| **specifier** | `agents/specifier` | claude-native | externally-visible behavior spec, acceptance criteria, the **failing acceptance tests**, and **proposed behavior boundaries** (candidate slices) | implementation, refactors, design rulings, the slice plan (the team lead owns it) |
 | **coder** | `agents/coder` | codex-native (`yolo: true`) | TDD implementation of **ONE** approved slice until its acceptance + unit tests pass | spec authorship, structural redesign, quality gates as polish, more than one slice |
 | **refactorer** | `agents/refactorer` | claude-native | structure-preserving cleanup of the just-coded slice; makes test / lint / typecheck gates green | adding or altering behavior, redesigning module boundaries, future slices |
 | **architect** | `agents/architect` | codex-native (`yolo: true`) | high-level design, module boundaries, dependency direction, **final verification** (full gate run over the assembled feature) + sign-off/bounce | writing feature code, rewriting slices, merging |
@@ -175,6 +175,7 @@ omnigent run bottega/  # launch the team lead
 
 Then describe a feature against a target project (e.g. "add `multiply` to the
 py-sample so its failing test passes"). The team lead detects the stack, asks the
-specifier for a spec + slice plan, **stops at Human Gate 1** for your approval,
+specifier for a spec + proposed boundaries, finalizes the slice plan, **stops at
+Human Gate 1** for your approval,
 runs the slice loop slice by slice, opens one PR, has the architect verify it,
 and **stops at Human Gate 2** for you to merge.

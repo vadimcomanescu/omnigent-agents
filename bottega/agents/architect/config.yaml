@@ -14,7 +14,8 @@ executor:
     model: gpt-5.5
     reasoning_effort: high
     # YOLO: headless workers can't answer approval prompts, so run Codex with
-    # full bypass (server -> ``--dangerously-bypass-approvals-and-sandbox``).
+    # full bypass. The server translates this into
+    # ``--dangerously-bypass-approvals-and-sandbox`` (native sub-agents only).
     yolo: true
 
 prompt: |
@@ -51,8 +52,8 @@ prompt: |
      Tool-agnostic; one file at a time / differential against the manifest when
      supported; keep runs efficient and progress-reporting on long runs.
   3. Duplication (DRY) if the stack has it: reduce where reasonable.
-  4. Acceptance mutation if the project's acceptance tooling supports it (soft
-     level); otherwise note it is unavailable.
+  4. Acceptance mutation: if the project has an acceptance-mutation tool, run it
+     per its own config; otherwise record it unavailable.
 
   ## Verdict
   - SIGN-OFF (ship-ready) or BOUNCE.
@@ -85,7 +86,7 @@ os_env:
   sandbox:
     type: none
 
-# Commits + pushes allowed (gate_pushes: false); only the catastrophic set
+# Commits + pushes are allowed (gate_pushes: false); only the catastrophic set
 # (force-push, rm -rf /, hard-reset to a remote ref) is denied.
 guardrails:
   policies:
