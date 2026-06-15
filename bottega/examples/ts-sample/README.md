@@ -1,10 +1,10 @@
-# ts-sample — swarmforge TypeScript target
+# ts-sample — bottega TypeScript target
 
-A minimal TypeScript project for exercising the swarmforge pipeline.
+A minimal TypeScript project for exercising the bottega pipeline.
 
 - `src/tinycalc.ts` — `add` is implemented (baseline).
 - `test/tinycalc.test.ts` — `adds` passes; **`multiplies` fails on purpose**.
-  That red test is the pipeline's starting point: a swarmforge slice implements
+  That red test is the pipeline's starting point: a bottega slice implements
   and exports `multiply` and drives it to green.
 
 Stack detection: the conductor sees `package.json` and selects the TS toolchain.

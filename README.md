@@ -10,14 +10,14 @@ or pull this repo on any device to get the same teams.
 | Team | What it's for |
 |------|---------------|
 | [`concordia`](./concordia) | **Concordia — mixture-of-experts panel.** Asks one question, in parallel, to Claude Opus 4.8 + GPT-5.5 + DeepSeek-V4-Pro, then a fixed Opus-4.8 synthesizer blinds the drafts, builds an evidence-weighted claim table, flags "unverified consensus", runs a gated different-vendor verifier, and returns one cross-checked answer. For hard reasoning / research / high-stakes questions where one model isn't enough. |
-| [`swarmforge`](./swarmforge) | **swarmforge — a software development team.** A team lead decomposes an approved spec into small one-shot-sized slices and dispatches a fresh worker per slice (specifier → coder → refactorer → architect), holding long-horizon memory in its own registry so no worker overflows its context. The four roles alternate across two vendors (claude / codex) so every handoff is cross-vendor. Branch+commit handoff across git worktrees, two human gates (approve the plan, merge the PR); the team lead never merges. Supports TypeScript and Python targets. Adapted from [swarm-forge](https://github.com/unclebob/swarm-forge). |
+| [`bottega`](./bottega) | **bottega — a software development team.** A team lead decomposes an approved spec into small one-shot-sized slices and dispatches a fresh worker per slice (specifier → coder → refactorer → architect), holding long-horizon memory in its own registry so no worker overflows its context. The four roles alternate across two vendors (claude / codex) so every handoff is cross-vendor. Branch+commit handoff across git worktrees, two human gates (approve the plan, merge the PR); the team lead never merges. Supports TypeScript and Python targets. |
 
 ## Layout
 
 ```
 omnigent-agents/
 ├── concordia/        # config.yaml + agents/<name>/config.yaml + its own README
-├── swarmforge/       # config.yaml + agents/<name>/config.yaml + examples/ + README
+├── bottega/       # config.yaml + agents/<name>/config.yaml + examples/ + README
 └── README.md
 ```
 

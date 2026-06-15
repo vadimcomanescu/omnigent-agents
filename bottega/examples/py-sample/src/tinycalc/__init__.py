@@ -1,7 +1,7 @@
-"""tinycalc — a deliberately tiny calculator used as a swarmforge target project.
+"""tinycalc — a deliberately tiny calculator used as a bottega target project.
 
 `add` is implemented (baseline, green). `multiply` is intentionally absent: it is
-the behavior a swarmforge slice is meant to deliver. See tests/test_tinycalc.py.
+the behavior a bottega slice is meant to deliver. See tests/test_tinycalc.py.
 """
 
 

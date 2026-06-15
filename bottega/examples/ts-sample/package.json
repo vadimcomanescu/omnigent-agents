@@ -2,7 +2,7 @@
   "name": "tinycalc-ts",
   "version": "0.0.1",
   "private": true,
-  "description": "swarmforge TypeScript sample target project — a tiny calculator the pipeline can extend.",
+  "description": "bottega TypeScript sample target project — a tiny calculator the pipeline can extend.",
   "type": "module",
   "scripts": {
     "test": "vitest run",

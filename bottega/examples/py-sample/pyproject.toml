@@ -1,7 +1,7 @@
 [project]
 name = "tinycalc"
 version = "0.0.1"
-description = "swarmforge Python sample target project — a tiny calculator the pipeline can extend."
+description = "bottega Python sample target project — a tiny calculator the pipeline can extend."
 requires-python = ">=3.9"
 
 # No build/install step needed: pytest puts src/ on the path so `import tinycalc`

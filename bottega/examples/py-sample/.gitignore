@@ -7,5 +7,5 @@ uv.lock
 poetry.lock
 Pipfile.lock
 
-# swarmforge runtime registry (per-target, never committed)
-.swarmforge/
+# bottega runtime registry (per-target, never committed)
+.bottega/

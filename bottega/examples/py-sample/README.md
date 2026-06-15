@@ -1,10 +1,10 @@
-# py-sample — swarmforge Python target
+# py-sample — bottega Python target
 
-A minimal Python project for exercising the swarmforge pipeline.
+A minimal Python project for exercising the bottega pipeline.
 
 - `src/tinycalc/__init__.py` — `add` is implemented (baseline).
 - `tests/test_tinycalc.py` — `test_add` passes; **`test_multiply` fails on
-  purpose**. That red test is the pipeline's starting point: a swarmforge slice
+  purpose**. That red test is the pipeline's starting point: a bottega slice
   implements `tinycalc.multiply` and drives it to green.
 
 Stack detection: the conductor sees `pyproject.toml` and selects the Python

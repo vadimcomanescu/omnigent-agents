@@ -1,6 +1,6 @@
-# swarmforge — a software development team for omnigent
+# bottega — a software development team for omnigent
 
-**swarmforge** is a self-contained omnigent team that builds a feature in a
+**bottega** is a self-contained omnigent team that builds a feature in a
 target software project. A **team lead** coordinates four specialist roles —
 specifier, coder, refactorer, and architect — each with one fixed
 responsibility. The team lead breaks an approved spec into small slices and
@@ -14,7 +14,7 @@ human merges the one PR.
 ## Why a fresh worker per slice
 
 A single worker driving an entire feature accumulates context until it overflows
-on any non-trivial feature. swarmforge avoids that by bounding each worker to one
+on any non-trivial feature. bottega avoids that by bounding each worker to one
 slice:
 
 - **Decompose into slices.** The team lead splits the approved spec into small
@@ -24,7 +24,7 @@ slice:
   one-shot" is the invariant.
 - **A fresh session per slice.** Every dispatch uses a new, slice-specific
   `title`. In omnigent, a new `(agent, title)` pair on `sys_session_send` spawns
-  a clean worker session; reusing a title would *continue* a thread. swarmforge
+  a clean worker session; reusing a title would *continue* a thread. bottega
   never reuses a worker's title across slices and never continues a worker from a
   previous slice — that would re-grow the very context it is bounding. Workers
   stay ephemeral and small.
@@ -100,8 +100,8 @@ The team carries one feature across roles using omnigent idioms — declared
 sub-agents over `sys_session_send`, first-class git worktrees, and a
 team-lead-owned JSON registry.
 
-- **One feature branch** carries the whole feature: `swarmforge/<slug>`.
-- **The team lead owns a registry** at `<target>/.swarmforge/<slug>.json`
+- **One feature branch** carries the whole feature: `bottega/<slug>`.
+- **The team lead owns a registry** at `<target>/.bottega/<slug>.json`
   (current slice index, ordered slice list, feature branch, base + current HEAD,
   per-slice handoff notes), written with the team lead's own `sys_os_*` tools.
   It holds all long-horizon memory.
@@ -114,18 +114,18 @@ team-lead-owned JSON registry.
 ### Cross-worktree branch handoff (the mechanism, and why it works)
 
 All worktrees of one repository share a single object database and ref store, so
-a commit made on `swarmforge/<slug>` from worker A's worktree is immediately
+a commit made on `bottega/<slug>` from worker A's worktree is immediately
 visible to any other worktree that checks that branch out. Git's only constraint
 is that a branch can be checked out in **one worktree at a time** — fine here,
 because the loop is sequential. Per dispatch the team lead (via `sys_os_shell`):
 
 ```
 # once per feature — create the branch without checking it out anywhere
-git -C <target> branch swarmforge/<slug> <base_commit>
+git -C <target> branch bottega/<slug> <base_commit>
 
 # per worker — drop the previous worktree, add a FRESH one on the shared branch
 git -C <target> worktree remove --force <prev_wt> 2>/dev/null || true
-git -C <target> worktree add <wt_path> swarmforge/<slug>
+git -C <target> worktree add <wt_path> bottega/<slug>
 #   ^ <wt_path> now contains EVERY prior worker's commit (shared refs/objects)
 ```
 
@@ -170,7 +170,7 @@ one **deliberately failing** test — the pipeline's red→green starting point:
 
 ```
 omnigent setup            # one-time per machine: CLI + login per harness
-omnigent run swarmforge/  # launch the team lead
+omnigent run bottega/  # launch the team lead
 ```
 
 Then describe a feature against a target project (e.g. "add `multiply` to the
@@ -178,12 +178,3 @@ py-sample so its failing test passes"). The team lead detects the stack, asks th
 specifier for a spec + slice plan, **stops at Human Gate 1** for your approval,
 runs the slice loop slice by slice, opens one PR, has the architect verify it,
 and **stops at Human Gate 2** for you to merge.
-
-## Attribution
-
-The role-pipeline structure — specifier → coder → refactorer → architect with
-per-role ownership boundaries, branch handoff, and two human gates — is adapted
-from [swarm-forge](https://github.com/unclebob/swarm-forge). swarmforge
-reimplements that structure on omnigent: declared sub-agents instead of tmux,
-fresh per-slice worker sessions with the long-horizon state held in the team
-lead's registry, and a cross-vendor (claude / codex) pipeline.
