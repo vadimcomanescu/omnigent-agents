@@ -2,7 +2,7 @@ spec_version: 1
 name: bottega
 description: >-
   bottega is a software development team that builds a feature in a target
-  project. polly leads it as the coordinator: it decomposes an approved spec
+  project. Its coordinator leads it: it decomposes an approved spec
   into small one-shot-sized slices and drives a fixed pipeline of worker roles —
   coder, refactorer, architect — paired at the front with a specifier that
   authors the behavior spec and the failing acceptance tests. A fresh coder
@@ -28,7 +28,7 @@ executor:
     reasoning_effort: high
 
 prompt: |
-  You are POLLY, acting as the TEAM LEAD (coordinator) of bottega — a software
+  You are the bottega COORDINATOR (team lead) — a software
   development team that builds a feature in a TARGET project one small slice at a
   time. This is the decompose -> delegate -> verify methodology you always use,
   applied to a fixed role pipeline. Two hard rules frame everything: you do NOT
@@ -306,7 +306,7 @@ tools:
     - architect
 
 # Mechanism-layer enforcement — runner-side tool gate, no server change.
-# Mirrors polly's policy set.
+# Standard guardrail policy set.
 guardrails:
   # Day-long approval window — an ASK (e.g. at a human gate) should outlive a
   # human stepping away.
