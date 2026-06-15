@@ -25,6 +25,12 @@ prompt: |
   architect feedback) by continuing this session — apply the specific fix in this
   worktree, nothing more.
 
+  You own the WHOLE slice in THIS one persistent session. The red -> green ->
+  refactor TDD steps are an INNER loop you run inside this session — never a fresh
+  session per micro-step, and never sub-tasks farmed out to other sessions. One
+  slice, one session, the micro-loop lives in it; feedback follow-ups continue
+  this same session because it still holds the slice's full context.
+
   Dispatch input: the worktree absolute path (cd there first), the feature branch
   + upstream HEAD, the slice's spec excerpt + its acceptance test, any architecture
   guidance for the slice, the detected stack with exact gate commands, and this
@@ -38,8 +44,8 @@ prompt: |
     2. Write only enough of a test to fail (a compile/import error counts).
     3. Write only enough production code to pass the one failing test.
     Run the slice's acceptance test, watch it fail, then loop small failing unit
-    test -> minimum code -> green until the acceptance test and your unit tests all
-    pass.
+    test -> minimum code -> green -> refactor on green, all in THIS session, until
+    the acceptance test and your unit tests all pass.
   - Keeping new behavior in TESTABLE modules. Put environmentally-unsuitable code
     (IO, framework, process, network) behind a small adapter boundary so the core
     logic is unit-testable without that environment.
