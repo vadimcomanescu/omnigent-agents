@@ -70,9 +70,10 @@ The registry is the team's long-horizon memory; you write no code and must not
 hold build state only in your own context. WRITE `.bottega/<feature-slug>.json`
 after EVERY state transition — a slice dispatched, a wave integrated, a slice
 merged, a bounce routed, the architect's sign-off — so any restart recovers by
-re-reading it. Each slice entry carries its {session conversation_id, worktree,
-branch, base SHA, status, changed_files, handbacks[]} alongside the plan/DAG +
-spine tags (the coordinator's registry schema). For recovery, a transition that
+re-reading it. Each slice entry carries its {per-role session conversation_ids
+(specifier / coder / refactorer), worktree, branch, base SHA, status,
+changed_files, handbacks[]} alongside the plan/DAG + spine tags (the coordinator's
+registry schema). For recovery, a transition that
 wasn't persisted didn't happen — persist it before you end the turn.
 
 ## 1. Create or adopt the integration branch

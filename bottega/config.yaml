@@ -226,8 +226,9 @@ terminals:
 
 tools:
   # The fixed four-role pipeline. Each name matches an agents/<name>/ directory.
-  # A fresh worker session per slice comes from a fresh title on sys_session_send,
-  # not from a new agent — so no spawn: true is needed.
+  # A slice's three roles are different agents, hence different sessions; a fresh
+  # worker session per (role, slice) comes from a slice-specific title on
+  # sys_session_send, not from a new agent — so no spawn: true is needed.
   agents:
     - specifier
     - coder

@@ -37,9 +37,10 @@ re-implementation loop: the architect never micro-loops the slices' code.
 ## On a bounce
 - Attribute each failure to the OWNING slice — use the **investigate** skill to
   pin a survivor or a duplication cluster to the slice that introduced it.
-- Route each fix back to that slice's OWN session (continue it, per
-  run-slice-pipeline's feedback rule) with a concrete recommendation and the gate
-  / mutation / DRY evidence.
+- Route each fix back to that slice's relevant role-session (continue it, per
+  run-slice-pipeline's feedback rule) — a surviving mutant or behavior gap to its
+  CODER session, a duplication cluster to its REFACTORER session — with a concrete
+  recommendation and the gate / mutation / DRY evidence.
 - Re-run **integrate-wave** for the touched slices, then re-verify. Cap the
   bounce loop at roughly THREE rounds; if it still can't sign off, escalate to the
   human with specifics rather than looping forever.

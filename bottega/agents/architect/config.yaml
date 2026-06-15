@@ -5,8 +5,9 @@ description: >-
   the whole assembled feature: full gates -> mutation testing (kills survivors) ->
   DRY -> acceptance mutation (only if the project already has it), each fix-gating
   the next, then SIGN-OFF or BOUNCE. A surviving mutant or significant duplication
-  is a BOUNCE. On a bounce, recommendations route back to the offending slice's own
-  session. Writes no feature code.
+  is a BOUNCE. On a bounce, recommendations route back to the offending slice's
+  relevant role-session — its CODER session for a behavior/implementation gap, its
+  REFACTORER session for a duplication/cleanup fix. Writes no feature code.
 
 executor:
   type: omnigent

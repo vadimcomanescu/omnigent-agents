@@ -34,8 +34,9 @@ or answering a repository-specific technical question.
   read the target repo so each slice's `produces` / `consumes` reflect the actual
   interfaces in the code — real contracts, not guessed edges.
 - **On a bounce** (architect-verify): dispatch an explore task to pin a surviving
-  mutant or a duplication cluster to the slice that introduced it, so the fix
-  routes to the right slice's own session.
+  mutant or a duplication cluster to the slice that introduced it, so the fix routes
+  to the right role-session — a surviving mutant to that slice's CODER session, a
+  duplication cluster to its REFACTORER session.
 
 ## Notes
 - The coordinator may use its own tools only to create task packets, maintain the
