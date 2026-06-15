@@ -3,15 +3,18 @@
 **bottega** is a self-contained omnigent team that builds a feature in a target
 software project. A **coordinator** (team lead) leads four specialist roles —
 specifier, coder, refactorer, and architect — each with one fixed
-responsibility. The coordinator decomposes an approved spec into a **dependency
+responsibility. The coordinator decomposes a **decent PRD** into a **dependency
 DAG of small vertical slices**, lands the shared **spine** first, then drives the
 independent slices in **parallel waves**, assembling each wave onto one
 **integration branch** and finishing with a whole-feature architect verification.
 
-The coordinator writes no code and never merges. A human approves the plan, and a
-human merges the one PR. The verbose procedures live in **on-demand skills**; the
-coordinator holds only the DAG, the width policy, the registry, and the two human
-gates, and loads the right skill at each stage.
+The coordinator writes no code and never merges. The input is a **decent PRD**;
+from there bottega runs **fully automatically** — dividing the PRD into executable
+spec criteria, then spine-first wavefront → integrate → verify — with **no
+mid-process human gate**, and opens **one PR** at the end for a human to merge (it
+never merges; there is no auto-merge). The verbose procedures live in **on-demand
+skills**; the coordinator holds only the DAG, the width policy, and the registry,
+and loads the right skill at each stage.
 
 ## The model: slices, a DAG, and parallel waves
 
@@ -32,16 +35,21 @@ not depend on each other:
   first and sequentially — often as a thin **contract** slice (just the
   interface / signature / stub / migration) so dependents can compile and author
   failing tests against a real contract while their implementations proceed later.
-- **Whole slice per session.** The coder owns the **entire slice in one persistent
-  session**: red → green → refactor is an **inner loop inside that session**, not a
-  fresh session per micro-step, and the slice is never carved into sub-tasks farmed
-  to other sessions. Review feedback on a slice routes **back to that slice's own
-  session**, never a fresh one.
-- **Parallel only across independent slices.** A fresh session per *new* slice;
-  parallelism only across slices with no edge either way. A degenerate DAG — a pure
-  chain where each slice consumes the previous — collapses to one slice per wave,
-  i.e. the sequential loop. Width is an upper bound (default conservative, cap ~5),
-  not a target.
+- **Three role-sessions per slice; the coder owns one of them whole.** For each
+  slice the coordinator dispatches three **SEPARATE** role-sessions in sequence —
+  specifier, then coder, then refactorer — staying in control between each (they
+  are different agents on different harnesses, hence different sessions). Only the
+  **coder** runs the entire slice in **one persistent session**: red → green →
+  refactor is an **inner loop inside that coder session**, not a fresh session per
+  micro-step, and the slice is never carved into sub-tasks farmed to other sessions.
+  Review feedback routes **back to that slice's relevant role-session** — the coder
+  for an implementation fix, the refactorer for cleanup — never a fresh one.
+- **Parallel only across independent slices.** Fresh role-sessions per *new* slice,
+  and the K-wide parallelism runs **ACROSS slices** (K slices' pipelines advancing
+  at once), never multiple roles in one session — only across slices with no edge
+  either way. A degenerate DAG — a pure chain where each slice consumes the previous
+  — collapses to one slice per wave, i.e. the sequential loop. Width is an upper
+  bound (default conservative, cap ~5), not a target.
 
 ## On-demand skills
 
@@ -51,7 +59,7 @@ The methodology is factored into skills the coordinator loads when needed
 | Skill | When it loads | What it does |
 |-------|---------------|--------------|
 | **slice-decompose-to-dag** | once at planning | spec → right-sized slices tagged `produces`/`consumes`/`touches`; derives the edges and tags the spine |
-| **run-slice-pipeline** | per slice, in the worker session | specifier → coder (TDD inner loop) → refactorer for ONE slice in ONE worktree |
+| **run-slice-pipeline** | per slice, run by the coordinator | the coordinator dispatches specifier → coder (coder-only TDD inner loop) → refactorer as SEPARATE sessions for ONE slice in ONE worktree |
 | **slice-wavefront** | once, the orchestration loop | integration branch, spine-first, then dependency-ordered parallel waves; durable + resumable |
 | **integrate-wave** | after each wave | detect cross-slice duplication, merge each slice branch one at a time, re-green the gates |
 | **architect-verify** | once, at the end | gates → mutation → cross-slice DRY over the whole feature; SIGN-OFF or BOUNCE |
@@ -72,20 +80,17 @@ The methodology is factored into skills the coordinator loads when needed
             │      specifier       │  behavior spec, acceptance criteria, FAILING
             │                      │  acceptance tests, proposed boundaries
             └──────────┬───────────┘
-                       │
-         ╔═════════════▼═══════════════╗
-         ║   HUMAN GATE 1 — approve     ║   spec + DAG (slices, edges, spine); STOP
-         ╚═════════════┬═══════════════╝
-                       │ slice-wavefront
+                       │ slice-wavefront — automatic, no human gate
    ┌───────────────────▼─────────────────────────────────────┐
    │  spine first (sequential): land the shared contracts     │
    │  ──────────────────────────────────────────────────────  │
    │  wave loop until the DAG drains:                          │
    │    ready set = independent slices whose producers merged  │
    │    spin K worktrees off the current integration HEAD      │
-   │    K parallel run-slice-pipeline (own worktree each):     │
-   │        specifier → coder (red→green→refactor inner loop)  │
-   │                  → refactorer                             │
+   │    K slices in parallel — per slice YOU dispatch, in      │
+   │    control between each, 3 SEPARATE role-sessions:        │
+   │      specifier →(you)→ coder (coder's red→green→refactor) │
+   │      →(you)→ refactorer                                   │
    │    integrate-wave: detect dup, merge each slice/* one at  │
    │        a time, re-green gates, advance integration HEAD   │
    └───────────────────┬─────────────────────────────────────┘
@@ -96,8 +101,8 @@ The methodology is factored into skills the coordinator loads when needed
             └──────────┬───────────┘
                        │ on sign-off → coordinator opens the ONE PR
          ╔═════════════▼═══════════════╗
-         ║   HUMAN GATE 2 — merge       ║   human merges the PR; coordinator
-         ╚═════════════════════════════╝   NEVER merges
+         ║   open ONE PR → human merges ║   coordinator opens one PR and STOPS;
+         ╚═════════════════════════════╝   a human merges — it NEVER merges (no auto-merge)
 ```
 
 Each slice runs in its **own git worktree**. Only the **coder** writes feature
@@ -105,8 +110,9 @@ code, and the roles that clean and verify it — refactorer and architect — ar
 **different agents**, so the implementation is always reviewed by a different
 agent than wrote it. (The roster table below shows the concrete vendor split that
 makes that review cross-vendor.) On a bounce, the architect attributes each
-failure to the owning slice and the coordinator routes the fix back to that
-slice's own session — bounded targeted passes only, never a re-implementation loop.
+failure to the owning slice and the coordinator routes the fix back to that slice's
+relevant role-session (the coder for an implementation fix) — bounded targeted
+passes only, never a re-implementation loop.
 
 ## Who reports to whom
 
@@ -118,11 +124,11 @@ handoff** — no worker ever hands off to another worker. Every role reports bac
                        ┌───────────────────────────┐
         specifier ◀───▶│        coordinator        │   the HUB — owns the DAG,
         (pairs at      │   decompose · dispatch ·  │   registry, gates, the
-         the front)    │   gate · record · route   │   integration branch, both gates
+         the front)    │   gate · record · route   │   integration branch, the one PR
                        └────┬──────────┬───────────┘
-            dispatch (fresh │          │ dispatch (fresh session per slice;
+            dispatch (fresh │          │ dispatch (fresh role-session per slice;
              session) ──────┤          ├────── feedback CONTINUES that slice's
-                            ▼          ▼              own coder/refactorer session)
+                            ▼          ▼         relevant coder/refactorer session)
                          coder     refactorer                 architect
                             │          │                          │
                             └──────────┴──────────────────────────┘
@@ -137,8 +143,8 @@ writes the spec + failing acceptance tests (pairs with the coordinator up front)
 the **coder** TDD-implements one whole slice; the **refactorer** cleans that slice
 and drives the gates green; the **architect** runs the final whole-feature
 verification (gates → mutation → DRY) and returns SIGN-OFF or BOUNCE — and on a
-bounce the coordinator (not the architect) routes the fix back to that slice's own
-session.
+bounce the coordinator (not the architect) routes the fix back to that slice's
+relevant role-session (the coder for an implementation fix).
 
 ## Roles
 
@@ -162,9 +168,10 @@ code, so build state cannot live in its context alone.
 
 - **Persisted.** The registry lives in a scratch file in the target repo at
   `<target>/.bottega/<slug>.json`, written with the coordinator's own `sys_os_*`
-  tools. It holds the plan/DAG + spine tags and, per slice, `{session
-  conversation_id, worktree, branch, base SHA, status, changed_files,
-  handbacks[]}`, plus the integration branch and its current HEAD. It is **updated
+  tools. It holds the plan/DAG + spine tags and, per slice, `{per-role session
+  conversation_ids (specifier/coder/refactorer), worktree, branch, base SHA,
+  status, changed_files, handbacks[]}`, plus the integration branch and its current
+  HEAD. It is **updated
   after every state transition** — a slice dispatched, a wave integrated, a slice
   merged, a bounce routed, the architect's sign-off.
 - **Never committed.** `.bottega/` is runtime scratch (the registry plus the
@@ -203,7 +210,7 @@ git -C <target> worktree add .bottega/wt/<id> -b slice/<id> <integration-HEAD-sh
 
 # after the wave — integrate-wave merges each slice branch into the integration
 # branch one at a time, re-greening the gates after each merge (a mechanical merge;
-# anything needing new code bounces back to the owning slice's session)
+# anything needing new code bounces back to the owning slice's coder session)
 ```
 
 The coordinator verifies each fresh worktree with `git -C <wt> rev-parse HEAD`
@@ -258,9 +265,11 @@ omnigent setup         # one-time per machine: CLI + login per harness
 omnigent run bottega/  # launch the coordinator
 ```
 
-Then describe a feature against a target project (e.g. "add `multiply` to the
-py-sample so its failing test passes"). The coordinator detects the stack, asks
-the specifier for a spec + proposed boundaries, decomposes the work into a DAG,
-**stops at Human Gate 1** for your approval, runs the spine-first wavefront wave by
+Then give it a decently-written **PRD/spec** for a feature against a target project
+(e.g. "add `multiply` to the py-sample so its failing test passes"). Assuming the
+PRD is decent, the coordinator runs **fully automatically, with no mid-process
+human stop**: it detects the stack, asks the specifier for a spec + proposed
+boundaries, decomposes the work into a DAG, runs the spine-first wavefront wave by
 wave (integrating each wave onto the integration branch), has the architect verify
-the whole feature, opens one PR, and **stops at Human Gate 2** for you to merge.
+the whole feature, and **opens one PR for you to merge** — it never merges, and
+there is no auto-merge.
