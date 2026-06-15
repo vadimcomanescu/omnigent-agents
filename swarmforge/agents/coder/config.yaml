@@ -9,6 +9,8 @@ executor:
   type: omnigent
   config:
     harness: codex-native
+    model: gpt-5.5
+    reasoning_effort: high
     # YOLO: headless workers can't answer approval prompts, so run Codex with
     # full bypass. The server translates this into
     # ``--dangerously-bypass-approvals-and-sandbox`` (native sub-agents only).
