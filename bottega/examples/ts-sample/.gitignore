@@ -1,0 +1,8 @@
+node_modules/
+# lockfiles generated during testing — never commit
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# bottega runtime registry (per-target, never committed)
+.bottega/

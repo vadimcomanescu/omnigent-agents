@@ -1,0 +1,20 @@
+[project]
+name = "tinycalc"
+version = "0.0.1"
+description = "bottega Python sample target project — a tiny calculator the pipeline can extend."
+requires-python = ">=3.9"
+
+# No build/install step needed: pytest puts src/ on the path so `import tinycalc`
+# resolves straight from the source tree.
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+# The lint gate (ruff) and typecheck gate (mypy) read these. Both are optional —
+# the conductor prefers the project's own scripts and falls back to defaults.
+[tool.ruff]
+line-length = 100
+
+[tool.mypy]
+files = ["src"]
+ignore_missing_imports = true

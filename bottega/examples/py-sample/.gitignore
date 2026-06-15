@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+# lockfiles generated during testing — never commit
+uv.lock
+poetry.lock
+Pipfile.lock
+
+# bottega runtime registry (per-target, never committed)
+.bottega/

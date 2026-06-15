@@ -10,12 +10,14 @@ or pull this repo on any device to get the same teams.
 | Team | What it's for |
 |------|---------------|
 | [`concordia`](./concordia) | **Concordia — mixture-of-experts panel.** Asks one question, in parallel, to Claude Opus 4.8 + GPT-5.5 + DeepSeek-V4-Pro, then a fixed Opus-4.8 synthesizer blinds the drafts, builds an evidence-weighted claim table, flags "unverified consensus", runs a gated different-vendor verifier, and returns one cross-checked answer. For hard reasoning / research / high-stakes questions where one model isn't enough. |
+| [`bottega`](./bottega) | **bottega — a software development team.** A team lead decomposes an approved spec into a dependency DAG of small vertical slices, lands shared contracts first (spine-first), then runs the independent slices in **parallel waves** — each slice a fresh worker session in its own git worktree (specifier → coder, who TDDs the whole slice in one session → refactorer), so no worker overflows its context. Each wave merges into one integration branch; a final architect pass verifies the **whole assembled feature** (gates → mutation → DRY) before the single PR. Only the coder writes feature code (codex), and it's reviewed/verified by a different vendor (refactorer + architect, both claude). The lean coordinator loads its methodology from **on-demand skills** and keeps **durable, restorable** memory in a per-target registry, so an interrupted run resumes instead of restarting. Two human gates (approve the plan, merge the PR); the team lead never merges. TypeScript + Python targets. |
 
 ## Layout
 
 ```
 omnigent-agents/
 ├── concordia/        # config.yaml + agents/<name>/config.yaml + its own README
+├── bottega/       # config.yaml + agents/<name>/ + skills/<name>/ + examples/ + README
 └── README.md
 ```
 
