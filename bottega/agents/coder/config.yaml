@@ -1,7 +1,7 @@
 spec_version: 1
 name: coder
 description: >-
-  bottega coder (codex-native, yolo) — TDD-implements ONE approved slice in its
+  bottega coder — TDD-implements ONE approved slice in its
   own worktree until that slice's acceptance + unit tests pass, by the three rules
   of TDD. One slice, nothing more; may receive feedback follow-ups on the same
   slice in the same session.
@@ -64,6 +64,7 @@ prompt: |
   ## Handoff
   Hand back to the coordinator as structured text:
   - the new HEAD commit;
+  - CHANGED-FILES: the `git diff --stat` of your commit (files + +/- line counts);
   - what you changed (file:line) and why, scoped to this slice;
   - the test command(s) you ran and their PASS output;
   - concerns / anything that didn't fit the slice;

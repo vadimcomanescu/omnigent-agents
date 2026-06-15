@@ -68,8 +68,8 @@ slice:
             └──────────┬───────────┘
                        │ dispatch (purpose: review)
             ┌──────────▼───────────┐
-            │  architect (codex)   │  full gate run over the whole feature;
-            │                      │  SIGN-OFF or BOUNCE (→ loop slice back)
+            │  architect (claude)  │  full gates → mutation → DRY over the
+            │                      │  whole feature; SIGN-OFF or BOUNCE
             └──────────┬───────────┘
                        │ on sign-off
          ╔═════════════▼═══════════════╗
@@ -77,9 +77,42 @@ slice:
          ╚═════════════════════════════╝   NEVER merges
 ```
 
-Each role runs in its **own git worktree**. The roles alternate across two
-vendors — claude → codex → claude → codex — so the coder's output is always
-cleaned and verified by a different vendor than wrote it.
+Each role runs in its **own git worktree**. Only the **coder** writes feature
+code, and it runs on a different vendor (codex) than the roles that clean and
+verify it (refactorer and architect, both claude) — so the implementation is
+always reviewed by a different vendor than wrote it.
+
+## Who reports to whom
+
+The team lead is the **hub**; every role is a spoke. There is **no peer-to-peer
+handoff** — no worker ever hands off to another worker. Every role reports back
+*only* to the team lead, and every dispatch originates from the team lead.
+
+```
+                       ┌───────────────────────────┐
+        specifier ◀───▶│         team lead         │   the HUB — owns the slice
+        (pairs at      │   decompose · dispatch ·  │   plan, registry, gates,
+         the front)    │   gate · record · route   │   the branch, both human gates
+                       └────┬──────────┬───────────┘
+            dispatch (fresh │          │ dispatch (fresh session per slice;
+             session) ──────┤          ├────── feedback CONTINUES that slice's
+                            ▼          ▼              own coder/refactorer session)
+                         coder     refactorer                 architect
+                            │          │                          │
+                            └──────────┴──────────────────────────┘
+                  report back ONLY to the team lead, never to each other:
+                  HEAD + CHANGED-FILES (git diff --stat), gate output,
+                  and the architect's SIGN-OFF / BOUNCE verdict
+```
+
+**Who does what / who reports to whom (one line):** the **team lead** decomposes,
+dispatches, gates, records, and routes — and is the only node anyone reports to;
+the **specifier** writes the spec + failing acceptance tests (pairs with the team
+lead up front); the **coder** TDD-implements one slice; the **refactorer** cleans
+that slice and drives the gates green; the **architect** runs the final
+verification (gates → mutation → DRY) and returns SIGN-OFF or BOUNCE — and on a
+bounce the team lead (not the architect) routes the fix back to that slice's own
+coder/refactorer session.
 
 ## Roles
 
@@ -88,11 +121,12 @@ cleaned and verified by a different vendor than wrote it.
 | **specifier** | `agents/specifier` | claude-native | externally-visible behavior spec, acceptance criteria, the **failing acceptance tests**, and **proposed behavior boundaries** (candidate slices) | implementation, refactors, design rulings, the slice plan (the team lead owns it) |
 | **coder** | `agents/coder` | codex-native (`yolo: true`) | TDD implementation of **ONE** approved slice until its acceptance + unit tests pass | spec authorship, structural redesign, quality gates as polish, more than one slice |
 | **refactorer** | `agents/refactorer` | claude-native | structure-preserving cleanup of the just-coded slice; makes test / lint / typecheck gates green | adding or altering behavior, redesigning module boundaries, future slices |
-| **architect** | `agents/architect` | codex-native (`yolo: true`) | high-level design, module boundaries, dependency direction, **final verification** (full gate run over the assembled feature) + sign-off/bounce | writing feature code, rewriting slices, merging |
+| **architect** | `agents/architect` | claude-native | high-level design, module boundaries, dependency direction, **final verification** over the assembled feature (full gates → **mutation testing, killing survivors** → **DRY** → acceptance mutation if present) + sign-off/bounce | writing feature code, rewriting slices, merging |
 
 Each role prompt carries explicit `## Owns` / `## Does Not Own` sections, an
 instruction to work **only the single slice handed in**, and a hand-back
-contract (new HEAD commit, what it did, concerns, ready-for-next).
+contract (new HEAD commit, a **CHANGED-FILES list** — `git diff --stat` of its
+commit — what it did, concerns, ready-for-next).
 
 ## Handoff protocol
 
@@ -109,7 +143,8 @@ team-lead-owned JSON registry.
   branch + upstream HEAD commit, the slice's spec excerpt + acceptance test, the
   role's Owns/Does-Not-Own boundary, and the stack + gate commands. The worker
   `cd`s into its worktree, commits onto the feature branch, and reports back
-  `{new HEAD commit, what it did, concerns, ready-for-next}`.
+  `{new HEAD commit, CHANGED-FILES (git diff --stat), what it did, concerns,
+  ready-for-next}`.
 
 ### Cross-worktree branch handoff (the mechanism, and why it works)
 
@@ -148,9 +183,9 @@ into every worker; workers do not re-detect.
 
 ### Prerequisites
 - **omnigent** installed, plus the worker CLIs on PATH: `claude`
-  (specifier/refactorer) and `codex` (coder/architect). Install + log in via
-  `omnigent setup`. Without `codex` there is no coder and no architect, so the
-  pipeline cannot run; without `claude` there is no specifier or refactorer.
+  (specifier/refactorer/architect) and `codex` (coder). Install + log in via
+  `omnigent setup`. Without `codex` there is no coder, so the pipeline cannot run;
+  without `claude` there is no specifier, refactorer, or architect.
 - **For a Python target:** `python` + `pytest` (and `ruff` / `mypy` if you want
   those gates).
 - **For a TypeScript target:** `node` + `npm`; run `npm install` in the target so

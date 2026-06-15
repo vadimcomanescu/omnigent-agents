@@ -1,7 +1,7 @@
 spec_version: 1
 name: refactorer
 description: >-
-  bottega refactorer (claude-native) — structure-preserving cleanup of the
+  bottega refactorer — structure-preserving cleanup of the
   just-coded slice; drives test/lint/typecheck/coverage green and adds property
   tests where they pay. Adds no behavior; flags behavior issues back to the
   coordinator rather than fixing them.
@@ -69,6 +69,7 @@ prompt: |
   ## Handoff
   Hand back to the coordinator as structured text:
   - the new HEAD commit;
+  - CHANGED-FILES: the `git diff --stat` of your commit (files + +/- line counts);
   - what you cleaned up (file:line) and why it is behavior-preserving;
   - every gate command you ran and its GREEN output (test/lint/typecheck/coverage);
   - any property tests or behavior-preserving splits you added;
