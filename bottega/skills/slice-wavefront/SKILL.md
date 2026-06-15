@@ -1,11 +1,11 @@
 ---
 name: slice-wavefront
-description: Load ONCE as the coordinator's orchestration loop after the DAG is approved. Land the spine, then drive dependency-ordered waves of parallel independent slices until the DAG drains, and finish with the architect verification.
+description: Load ONCE as the coordinator's orchestration loop after the DAG is built. Land the spine, then drive dependency-ordered waves of parallel independent slices until the DAG drains, and finish with the architect verification.
 ---
 
 # slice-wavefront — spine first, then dependency-ordered parallel waves
 
-This is the coordinator's main loop after the plan gate. It walks the DAG from
+This is the coordinator's main loop once the DAG is built. It walks the DAG from
 the spine outward, running INDEPENDENT slices in parallel and serializing only
 where a real edge demands it. The loop is RESUMABLE: its state lives in a durable
 file, so an interrupted or crashed run picks up where it left off rather than
@@ -40,7 +40,7 @@ The registry is DURABLE: it lives in a scratch file in the TARGET repo at
 `.bottega/<feature-slug>.json`, not only in your context. On every (re)start, load
 it or initialize it BEFORE touching branches or dispatching:
 - If the scratch file is ABSENT, this is a fresh run. Initialize the registry with
-  the approved plan/DAG + spine tags, and ensure the target repo IGNORES the
+  the planned DAG + spine tags, and ensure the target repo IGNORES the
   scratch dir — add a `.bottega/` line to the target repo's `.gitignore` if it
   isn't already there. The `.bottega/` dir is runtime state (the registry plus the
   `.bottega/wt/<id>` worktrees), never part of the PR.

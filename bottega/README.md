@@ -3,15 +3,18 @@
 **bottega** is a self-contained omnigent team that builds a feature in a target
 software project. A **coordinator** (team lead) leads four specialist roles —
 specifier, coder, refactorer, and architect — each with one fixed
-responsibility. The coordinator decomposes an approved spec into a **dependency
+responsibility. The coordinator decomposes a **decent PRD** into a **dependency
 DAG of small vertical slices**, lands the shared **spine** first, then drives the
 independent slices in **parallel waves**, assembling each wave onto one
 **integration branch** and finishing with a whole-feature architect verification.
 
-The coordinator writes no code and never merges. A human approves the plan, and a
-human merges the one PR. The verbose procedures live in **on-demand skills**; the
-coordinator holds only the DAG, the width policy, the registry, and the two human
-gates, and loads the right skill at each stage.
+The coordinator writes no code and never merges. The input is a **decent PRD**;
+from there bottega runs **fully automatically** — dividing the PRD into executable
+spec criteria, then spine-first wavefront → integrate → verify — with **no
+mid-process human gate**, and opens **one PR** at the end for a human to merge (it
+never merges; there is no auto-merge). The verbose procedures live in **on-demand
+skills**; the coordinator holds only the DAG, the width policy, and the registry,
+and loads the right skill at each stage.
 
 ## The model: slices, a DAG, and parallel waves
 
@@ -72,11 +75,7 @@ The methodology is factored into skills the coordinator loads when needed
             │      specifier       │  behavior spec, acceptance criteria, FAILING
             │                      │  acceptance tests, proposed boundaries
             └──────────┬───────────┘
-                       │
-         ╔═════════════▼═══════════════╗
-         ║   HUMAN GATE 1 — approve     ║   spec + DAG (slices, edges, spine); STOP
-         ╚═════════════┬═══════════════╝
-                       │ slice-wavefront
+                       │ slice-wavefront — automatic, no human gate
    ┌───────────────────▼─────────────────────────────────────┐
    │  spine first (sequential): land the shared contracts     │
    │  ──────────────────────────────────────────────────────  │
@@ -96,8 +95,8 @@ The methodology is factored into skills the coordinator loads when needed
             └──────────┬───────────┘
                        │ on sign-off → coordinator opens the ONE PR
          ╔═════════════▼═══════════════╗
-         ║   HUMAN GATE 2 — merge       ║   human merges the PR; coordinator
-         ╚═════════════════════════════╝   NEVER merges
+         ║   open ONE PR → human merges ║   coordinator opens one PR and STOPS;
+         ╚═════════════════════════════╝   a human merges — it NEVER merges (no auto-merge)
 ```
 
 Each slice runs in its **own git worktree**. Only the **coder** writes feature
@@ -118,7 +117,7 @@ handoff** — no worker ever hands off to another worker. Every role reports bac
                        ┌───────────────────────────┐
         specifier ◀───▶│        coordinator        │   the HUB — owns the DAG,
         (pairs at      │   decompose · dispatch ·  │   registry, gates, the
-         the front)    │   gate · record · route   │   integration branch, both gates
+         the front)    │   gate · record · route   │   integration branch, the one PR
                        └────┬──────────┬───────────┘
             dispatch (fresh │          │ dispatch (fresh session per slice;
              session) ──────┤          ├────── feedback CONTINUES that slice's
@@ -258,9 +257,11 @@ omnigent setup         # one-time per machine: CLI + login per harness
 omnigent run bottega/  # launch the coordinator
 ```
 
-Then describe a feature against a target project (e.g. "add `multiply` to the
-py-sample so its failing test passes"). The coordinator detects the stack, asks
-the specifier for a spec + proposed boundaries, decomposes the work into a DAG,
-**stops at Human Gate 1** for your approval, runs the spine-first wavefront wave by
+Then give it a decently-written **PRD/spec** for a feature against a target project
+(e.g. "add `multiply` to the py-sample so its failing test passes"). Assuming the
+PRD is decent, the coordinator runs **fully automatically, with no mid-process
+human stop**: it detects the stack, asks the specifier for a spec + proposed
+boundaries, decomposes the work into a DAG, runs the spine-first wavefront wave by
 wave (integrating each wave onto the integration branch), has the architect verify
-the whole feature, opens one PR, and **stops at Human Gate 2** for you to merge.
+the whole feature, and **opens one PR for you to merge** — it never merges, and
+there is no auto-merge.

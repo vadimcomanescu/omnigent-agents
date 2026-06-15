@@ -1,6 +1,6 @@
 ---
 name: slice-decompose-to-dag
-description: Load ONCE at planning (coordinator + specifier) to turn an approved spec into right-sized vertical slices tagged produces/consumes/touches, derive the dependency DAG, and tag the spine. Load before any slice is dispatched.
+description: Load ONCE at planning (coordinator + specifier) to turn a PRD into right-sized vertical slices tagged produces/consumes/touches, derive the dependency DAG, and tag the spine. Load before any slice is dispatched.
 ---
 
 # slice-decompose-to-dag — spec to a dependency DAG
@@ -63,4 +63,5 @@ breaks at integration (missed ones).
   acceptance tests it can author up front, and the proposed behavior boundaries.
 - The COORDINATOR owns the final ordered DAG: it accepts, splits, or re-tags the
   proposed boundaries, then writes the slices, edges, and spine tags into the
-  registry. That DAG is what the human approves at the plan gate.
+  registry. That DAG drives the build directly — the wavefront proceeds from it
+  automatically, with no human approval gate.
