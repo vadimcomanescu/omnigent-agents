@@ -23,22 +23,38 @@ never generates or runs Gherkin against the project (a deliberate follow-on).
 - Per-language packages live under `python/`, `typescript/`, `go/`, `rust/` in a
   clone of the kit at the tag.
 
+## The required tool set
+The lock is only valid if it RECORDS the full required tool set — **both**
+`gherkin-parser` AND `gherkin-mutator` — each at its expected `.bottega/bin/<tool>`
+path. A lock missing either required entry is INVALID, no matter how well the
+entries it *does* record verify.
+
 ## Procedure (idempotent — safe to re-run)
 1. **Read the lock.** If `.bottega/aps.lock` exists, load it. Absent lock -> go
    straight to install (step 5).
-2. **Verify each recorded tool.** For every entry in `tools[]`, confirm the binary
-   exists at its recorded path AND recompute its SHA-256 (`shasum -a 256 <path>` or
-   `sha256sum <path>`) and confirm it equals the recorded `sha256`. A missing binary
-   or a mismatch invalidates the lock.
+2. **Verify the required tool set.** For EACH required tool (`gherkin-parser`,
+   `gherkin-mutator`): confirm the lock has an entry for it at `.bottega/bin/<tool>`,
+   the binary exists at that path, and its recomputed SHA-256 (`shasum -a 256 <path>`
+   or `sha256sum <path>`) equals the recorded `sha256`. A required entry that is
+   ABSENT from the lock, a missing binary, or a checksum mismatch invalidates the
+   lock — go to install (step 5). Do not let extra/unknown `tools[]` entries
+   substitute for a missing required one.
 3. **Detect the stack.** Inspect the target root (read-only):
    - `pyproject.toml` / `setup.py` / `requirements.txt` -> **python**
    - `package.json` / `tsconfig.json` -> **typescript**
    - `go.mod` -> **go**
    - `Cargo.toml` -> **rust**
-4. **NO-OP test.** If the lock is present, EVERY recorded binary exists with a
-   matching checksum, AND the lock's `stack` equals the detected stack -> you are
-   done. Report ok and the resolved ABSOLUTE paths; touch nothing (no fetch, no
-   re-write of the lock).
+4. **NO-OP test.** No-op ONLY when ALL of these hold:
+   - the lock is present, AND
+   - it RECORDS the full required tool set — both `gherkin-parser` and
+     `gherkin-mutator` — at their `.bottega/bin/<tool>` paths, AND
+   - each of those required binaries exists, AND
+   - each required binary's checksum matches its recorded `sha256`, AND
+   - the lock's `stack` covers the detected stack.
+   When all hold -> you are done: report ok and the resolved ABSOLUTE paths; touch
+   nothing (no fetch, no re-write of the lock). If ANY condition fails — including a
+   required tool entry absent from the lock — do NOT no-op; proceed to install
+   (step 5).
 5. **Otherwise BOOTSTRAP.**
    - Ensure `.bottega/bin/` exists (`mkdir -p .bottega/bin`).
    - Fetch the pinned kit at `v0.1.0` and install the binaries into `.bottega/bin/`,

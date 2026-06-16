@@ -100,10 +100,12 @@ prompt: |
      verifies-or-installs the pinned APS kit (`gherkin-parser` + `gherkin-mutator`,
      tag `v0.1.0`) into `<target>/.bottega/bin/`, writes `<target>/.bottega/aps.lock`,
      and reports the resolved ABSOLUTE tool paths.
-     - On SUCCESS: read `.bottega/aps.lock`, extract the absolute `gherkin-parser`
-       and `gherkin-mutator` paths, and thread them into EVERY slice dispatch packet
-       as `APS_PARSER=<abs>` / `APS_MUTATOR=<abs>` (see run-slice-pipeline). Then
-       flow into BUILD.
+     - On SUCCESS: read `.bottega/aps.lock`. Each tool `path` there is REPO-RELATIVE
+       (`.bottega/bin/<tool>`); RESOLVE each against the TARGET repo root into an
+       ABSOLUTE path before threading it into EVERY slice dispatch packet as
+       `APS_PARSER=<abs>` / `APS_MUTATOR=<abs>` (see run-slice-pipeline) — a slice
+       worker cd's into `.bottega/wt/<id>`, so a relative path would not resolve in
+       its worktree and must never be handed over. Then flow into BUILD.
      - On FAILURE: HALT the run and surface the bootstrapper's error to the human;
        do NOT open any slice worktree or dispatch any slice (a FAILURE-path
        escalation the end-turn rule allows). The wave never starts without the APS
