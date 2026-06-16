@@ -19,6 +19,27 @@ slice's acceptance is driven by the **[acceptance-pipeline-kit](https://github.c
 acceptance entrypoint, the coder drives it green, and the architect runs APS
 **acceptance mutation** alongside source mutation at the final gate.
 
+## Status — what is exercised vs. designed-but-unproven
+
+Be honest about maturity. This bundle is **designed** end-to-end, but only a narrow
+path has been **run**:
+
+- **Exercised:** a single Python/pytest slice, K=1 (one ready slice per wave), the
+  happy path — PLAN → BOOTSTRAP → one slice through specifier → coder → refactorer →
+  integrate → architect-verify (gates + `mutmut` + DRY + `gherkin-mutator`) → one PR.
+  The APS step-isolation pattern (two features sharing a step text) and the
+  acceptance-mutation kill are proven by `examples/aps-step-isolation` (a runnable
+  regression).
+- **Designed but NOT yet exercised:** K>1 parallel waves and `fanout`; the spine /
+  `contract_landed` follow-up flow; multi-slice integration, merge-conflict routing,
+  and cross-slice DRY bounces; resume/reclassify after a crash; the architect
+  bounce-loop. These are specified in the skills but have not been run against a real
+  multi-slice PRD.
+- **Not implemented:** the APS acceptance/mutation layer for any stack other than
+  Python/pytest (the TypeScript row below is gates-only).
+
+Treat the unexercised paths as review-ready specifications, not as verified behavior.
+
 ## The model: slices, a DAG, and parallel waves
 
 A single worker driving an entire feature accumulates context until it overflows.
@@ -59,8 +80,19 @@ not depend on each other:
 The methodology is factored into skills the coordinator loads when needed
 (auto-discovered from `skills/<name>/SKILL.md`). The **`constitution`** skill is
 different: it carries the team-wide invariants and is loaded by **every role** at
-startup (each role's `skills/constitution` points to the one bundle-root file), so
-no invariant is restated across prompts.
+startup, so no invariant is restated across prompts. omnigent bundles can't symlink
+(the extractor rejects links) and there's no build step, so each role carries a REAL
+copy of the constitution. The canonical source is `skills/constitution/SKILL.md`; the
+four role copies are byte-identical and DERIVED from it — never hand-edit a copy:
+
+```sh
+# regenerate the role copies from the canonical source
+for r in specifier coder refactorer architect; do
+  cp skills/constitution/SKILL.md "agents/$r/skills/constitution/SKILL.md"; done
+# verify all five are byte-identical (prints 1 distinct hash)
+sha256sum skills/constitution/SKILL.md agents/*/skills/constitution/SKILL.md \
+  | awk '{print $1}' | sort -u | wc -l
+```
 
 | Skill | When it loads | What it does |
 |-------|---------------|--------------|
@@ -241,17 +273,24 @@ source itself.
 The coordinator detects the **target project's** stack at planning and prefers the
 project's own scripts, falling back to defaults:
 
-| Stack | Detected by | tests | lint | typecheck | coverage (optional) | source mutation + DRY + APS acceptance mutation (architect, mandatory) |
-|-------|-------------|-------|------|-----------|---------------------|----------------------------------------|
-| **TypeScript / JS** | `package.json` | `npm test` / `vitest run` / `jest` | `eslint` | `tsc --noEmit` | c8 | Stryker / jscpd / `gherkin-mutator` |
-| **Python** | `pyproject.toml` · `setup.py` · `requirements.txt` | `pytest` | `ruff` (or flake8) | `mypy` (or pyright) | pytest-cov | `mutmut` (pinned venv) / a duplication detector / `gherkin-mutator` |
+**The APS acceptance pipeline is wired for Python/pytest ONLY.** The kit's
+`aps-kit` package, the generated-entrypoint glue, `mutmut` source mutation, and
+`gherkin-mutator` acceptance mutation are all Python-path. A TypeScript target can run
+the plain gates (test/lint/typecheck) but the APS acceptance + mutation layer is NOT
+implemented for it — do not assume the table's TS row is exercised.
 
-Coverage is included only when the project already configures it. **Source mutation,
-cross-slice DRY, and APS acceptance mutation are not optional** — the architect runs
-all three over the whole assembled feature. The APS acceptance toolchain is pinned by
-the BOOTSTRAP step (`bootstrap-aps`) and recorded in `.bottega/aps.lock`; source
-mutation is installed stack-appropriately. The detected stack + exact gate commands
-are recorded in the registry and passed into every worker; workers do not re-detect.
+| Stack | Detected by | tests | lint | typecheck | coverage (optional) | source mutation + DRY + APS acceptance mutation (architect) |
+|-------|-------------|-------|------|-----------|---------------------|----------------------------------------|
+| **Python** (APS-wired) | `pyproject.toml` · `setup.py` · `requirements.txt` | `pytest` | `ruff` (or flake8) | `mypy` (or pyright) | pytest-cov | `mutmut` + a duplication detector + `gherkin-mutator` (pinned venv) |
+| **TypeScript / JS** (gates only; APS **not wired**) | `package.json` | `npm test` / `vitest run` / `jest` | `eslint` | `tsc --noEmit` | c8 | designed, not implemented |
+
+Coverage is included only when the project already configures it. For the Python path,
+**source mutation, cross-slice DRY, and APS acceptance mutation are mandatory** — the
+architect runs all three over the whole assembled feature, writes each tool's output to
+`.bottega/verify/<head>/`, and records the paths in the registry; pr-assemble refuses
+to open the PR if any evidence file is missing. The APS toolchain is pinned by the
+BOOTSTRAP step (`bootstrap-aps`) and recorded in `.bottega/aps.lock`. The detected stack
++ exact gate commands are recorded in the registry and passed into every worker.
 
 ### Prerequisites
 - **omnigent** installed, plus the worker CLIs on PATH: `claude`
@@ -276,7 +315,12 @@ one **deliberately failing** test — the pipeline's red→green starting point:
 - [`examples/py-sample`](./examples/py-sample) — Python; `pytest` → 1 passed
   (`add`), 1 failed (`multiply`, the target slice).
 - [`examples/ts-sample`](./examples/ts-sample) — TypeScript; `npm test` → 1
-  passed (`adds`), 1 failed (`multiplies`, the target slice).
+  passed (`adds`), 1 failed (`multiplies`, the target slice). Gates only — APS is
+  not wired for TypeScript.
+- [`examples/aps-step-isolation`](./examples/aps-step-isolation) — a runnable
+  **regression**: two features sharing a Gherkin step text must collect + run without
+  the duplicate-handler collision, and acceptance mutation must kill every mutant.
+  Proves the per-feature-Registry glue pattern (`./run.sh`).
 
 Each sample already gitignores the `.bottega/` runtime scratch (`.bottega/*` +
 `!.bottega/aps.lock`), so the registry, worktrees, APS binaries, and pinned venv

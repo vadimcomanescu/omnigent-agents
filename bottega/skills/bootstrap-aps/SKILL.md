@@ -75,8 +75,8 @@ matter how well the entries it does record verify.
      `lock.venv.python_version` (`"$INTERP" --version` → `Python 3.12.x`);
    - the language package is installed at the recorded version
      (`"$INTERP" -m pip show aps-kit` → `Version:` equals `lock.venv.packages[aps-kit]`);
-   - `mutmut` is importable/installed in the venv
-     (`"$INTERP" -m pip show mutmut` succeeds);
+   - `mutmut` AND `pytest` are importable/installed in the venv
+     (`"$INTERP" -m pip show mutmut pytest` succeeds — pytest runs the generated tests);
    - the console scripts resolve (`<venv>/bin/acceptance-entrypoint-generator` and
      `<venv>/bin/aps-adapter` exist and are executable).
    Any failure → install.
@@ -97,13 +97,15 @@ matter how well the entries it does record verify.
        | sh -s -- --version v0.1.0 --bin-dir "$TARGET_ROOT/.bottega/bin"
      ```
      install.sh checksum-verifies the download and prints `installed <tool> -> <path>`.
-   - Pinned venv — create at 3.12 and install the language package + mutmut INTO it
-     (never system pip):
+   - Pinned venv — create at 3.12 and install the language package + mutmut + pytest
+     INTO it (never system pip). `mutmut` pulls pytest transitively, but install it
+     explicitly so the venv reliably HAS pytest (it runs the generated acceptance
+     tests):
      ```sh
      uv venv --python 3.12 "$TARGET_ROOT/.bottega/aps-venv"
      uv pip install --python "$TARGET_ROOT/.bottega/aps-venv/bin/python" \
-       "git+https://github.com/vadimcomanescu/acceptance-pipeline-kit@v0.1.0#subdirectory=python"
-     uv pip install --python "$TARGET_ROOT/.bottega/aps-venv/bin/python" mutmut
+       "git+https://github.com/vadimcomanescu/acceptance-pipeline-kit@v0.1.0#subdirectory=python" \
+       mutmut pytest
      ```
      (If `uv` is unavailable, the equivalent is
      `python3.12 -m venv "$TARGET_ROOT/.bottega/aps-venv"` then
@@ -132,7 +134,8 @@ matter how well the entries it does record verify.
        "python_version": "3.12.x",
        "packages": [
          {"name": "aps-kit", "version": "0.1.0"},
-         {"name": "mutmut",  "version": "<observed>"}
+         {"name": "mutmut",  "version": "<observed>"},
+         {"name": "pytest",  "version": "<observed>"}
        ],
        "entrypoints": {
          "acceptance-entrypoint-generator": "<target-abs>/.bottega/aps-venv/bin/acceptance-entrypoint-generator",
@@ -150,7 +153,9 @@ matter how well the entries it does record verify.
    !.bottega/aps.lock
    ```
    The binaries in `.bottega/bin/` and the venv in `.bottega/aps-venv/` are NEVER
-   committed; the lock IS.
+   committed; the lock IS. BOOTSTRAP runs before the integration branch exists, so it
+   only WRITES the lock here — slice-wavefront COMMITS it onto the integration branch
+   (its first commit) so the lock ships in the PR; pr-assemble refuses if it is untracked.
 9. **Resolve + report, or fail loudly.** Resolve each path the slices need into an
    ABSOLUTE path and write them into the registry `aps` block + the report:
    - `APS_PARSER`  = `<target-abs>/.bottega/bin/gherkin-parser`,

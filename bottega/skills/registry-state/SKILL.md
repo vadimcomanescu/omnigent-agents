@@ -27,6 +27,13 @@ architect-verify all read and advance the state defined here.
   },
   "base_commit": "<sha>", "integration_head": "<sha>",
   "bounce_round": <int>,
+  "verification": {                     // architect-verify writes evidence FILES + records paths
+    "evidence_dir": "<abs>/.bottega/verify/<integration_head>",
+    "source_mutation": "<path to mutmut output>",
+    "dry": "<path to jscpd output>",
+    "acceptance_mutation": "<path to gherkin-mutator output>",
+    "verdict": "sign-off|bounce|null"   // pr-assemble refuses unless verdict==sign-off AND all 3 paths exist
+  },
   "slices": [
     {"id": "...", "behavior": "...",
      "produces": [...], "consumes": [...], "touches": [...],
@@ -64,34 +71,53 @@ caps it).
 
 ## The per-slice phase machine
 
-Every slice is in exactly ONE `phase`. A phase advances ONLY on a completed-and-
-recorded fact (a role handback the coordinator verified, or a merge), never on a
-dispatch. The running phases (`specifying`, `coding`, `refactoring`) are live-run
-states only — on resume they are NOT trusted (see below).
+Every slice is in exactly ONE `phase`, and phases are of two kinds — this is the ONE
+rule the whole bundle uses:
+- **Settled phases** (`pending`, `spec_done`, `coder_green`, `ready_to_integrate`,
+  `contract_landed`, `integrated`, `done`) record the last COMPLETED-and-persisted fact
+  — a role handback the coordinator verified, or a merge whose integration gate
+  re-greened. A slice SETTLES only on such a fact, NEVER on a dispatch.
+- **Running markers** (`specifying`, `coding`, `refactoring`) are transient: the
+  coordinator sets one WHEN IT DISPATCHES a worker, purely to show the slice is in
+  flight. A running marker is NEVER trusted on resume — it falls back to the last
+  settled phase (see Resume).
 
-| phase | meaning | advances to | on what fact |
-|-------|---------|-------------|--------------|
-| `pending` | a producer is not yet satisfied | `specifying` | every producer is `integrated`/`contract_landed`/`done` → slice enters the ready set, specifier dispatched |
-| `specifying` | specifier running | `spec_done` | specifier handback: `.feature` + generated FAILING acceptance entrypoint committed, confirmed RED for the right reason; record `red_head`, `feature_file`, `acceptance_dir` |
-| `spec_done` | the RED acceptance is committed; no implementation yet | `coding` | coder dispatched |
-| `coding` | coder running | `coder_green` | coder handback: acceptance entrypoint + unit tests GREEN, committed; record `green_head` and `gate_results` |
-| `coder_green` | implementation is green; not yet cleaned | `refactoring` | refactorer dispatched |
-| `refactoring` | refactorer running | `ready_to_integrate` | refactorer handback: structure-preserving cleanup, ALL gates green at a new `green_head`, `ready_for_next: yes` |
-| `ready_to_integrate` | gates green + refactorer handback present | `integrated` (or `contract_landed`) | integrate-wave merges the branch AND re-greens the integration gate at the new integration head, recording `integrated_head` + `integration_gate: pass` |
-| `contract_landed` | a spine STUB merged + integration gate green so dependents can build; full impl still owed | `integrated`/`done` | its `impl_followup_of` slice reaches `integrated` |
-| `integrated` | branch merged AND the integration gate recorded green at `integrated_head` | `done` | whole DAG signs off |
-| `done` | terminal | — | — |
+So "settle a phase only on a completed fact" and "set a running marker on dispatch" are
+the same rule from two sides. The wave loop (slice-wavefront) decides its next action
+off the SETTLED phase, so a dispatch never fabricates progress.
+
+| phase | kind | next action (off the SETTLED phase) | settles to / on what fact |
+|-------|------|-------------------------------------|---------------------------|
+| `pending` | settled | when every producer is `integrated`/`contract_landed`/`done`, dispatch the specifier (set marker `specifying`) | — |
+| `specifying` | running marker | (in flight) | `spec_done` on the specifier's verified handback: `.feature` + generated FAILING entrypoint + glue committed, RED for the right reason; record `red_head`, `feature_file`, `acceptance_dir` |
+| `spec_done` | settled | dispatch the coder (set marker `coding`) | — |
+| `coding` | running marker | (in flight) | `coder_green` on the coder's verified handback: entrypoint + unit tests GREEN, committed; record `green_head` and `gate_results` |
+| `coder_green` | settled | dispatch the refactorer (set marker `refactoring`) | — |
+| `refactoring` | running marker | (in flight) | `ready_to_integrate` on the refactorer's verified handback: cleanup done, ALL gates green at a new `green_head`, `ready_for_next: yes` |
+| `ready_to_integrate` | settled | hand to integrate-wave | `integrated` (or `contract_landed`) once integrate-wave merges AND re-greens the integration gate, recording `integrated_head` + `integration_gate: pass` |
+| `contract_landed` | settled | wait on the follow-up impl slice | `integrated`/`done` once the FOLLOW-UP slice — the one whose `impl_followup_of` points at THIS spine — reaches `integrated` |
+| `integrated` | settled | (none) | `done` when the whole DAG signs off |
+| `done` | settled (terminal) | — | — |
 
 A merge alone does NOT make a slice `integrated`: the phase advances only when
 integrate-wave has ALSO re-greened the integration gate at the post-merge integration
 head and recorded `integration_gate: pass`. A merged branch without that recorded
 green evidence sits in the crash window and is handled by resume.
 
-A slice is in the **ready set** for (re)dispatch only when every producer is
-`integrated`/`contract_landed`/`done` AND its phase is `pending` or a running phase
-that resume kicked back to a not-yet-handed-back state. `integrated`, `contract_landed`,
-and the post-handback phases are EXCLUDED — a slice that already holds a commit is never
-re-dispatched from scratch.
+## The ready set (the ONE definition; slice-wavefront references this)
+The **ready set** is the slices the wave loop ACTS ON, by the next-action column above
+— it spans every non-terminal SETTLED phase, not just `pending`:
+- `pending` with every producer `integrated`/`contract_landed`/`done` → dispatch specifier;
+- `spec_done` → dispatch coder;
+- `coder_green` → dispatch refactorer;
+- `ready_to_integrate` → hand to integrate-wave (merge, not dispatch).
+A running marker (`specifying`/`coding`/`refactoring`) is NOT in the ready set while a
+worker is live; on resume it falls back to its last settled phase and re-enters the set
+there. `integrated`, `contract_landed` (until its follow-up lands), and `done` are
+EXCLUDED. Crucially, a settled phase is dispatchable from itself — so a crash AFTER a
+handback but BEFORE the next dispatch (a slice sitting at `spec_done` or `coder_green`)
+cannot stall: the next pass dispatches the next role. slice-wavefront calls this the
+"integrate-or-dispatch" step and uses THIS definition; it does not restate it.
 
 ## The spine contract-landed rule (1.2)
 

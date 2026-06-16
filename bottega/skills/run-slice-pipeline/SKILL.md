@@ -36,39 +36,55 @@ sessions and NEVER starts a fresh session per micro-step. This one-session rule 
 coder's only — the specifier and refactorer are their own single sessions; it is NOT
 restated in any role prompt.
 
-## The APS pipeline the slice runs (real kit commands)
+## The APS pipeline the slice runs (real kit commands, Python/pytest)
 The coordinator threads the BOOTSTRAP-resolved ABSOLUTE paths into every packet:
-`APS_PARSER` (gherkin-parser), `APS_VENV` (the pinned 3.12 venv), `APS_GENERATOR`
+`APS_PARSER` (gherkin-parser), `APS_VENV` (the pinned 3.12 venv — it has `aps_kit`,
+`mutmut`, AND pytest, pulled in transitively by mutmut), `APS_GENERATOR`
 (`acceptance-entrypoint-generator`), `APS_ADAPTER` (`aps-adapter`), `APS_MUTATOR`
-(gherkin-mutator). `$APS_VENV/bin/*` provides the KIT CLIs ONLY — the venv holds
-`aps-kit` + `mutmut`, NOT pytest; the generated acceptance tests and unit tests run on
-the PROJECT's own `pytest` (the handed gate command), exactly as the kit does. Per
-slice, the specifier authors and the coder drives:
+(gherkin-mutator). Per slice, the specifier authors and the coder drives:
 ```sh
-"$APS_PARSER" features/<id>.feature build/acceptance/<id>.ir.json
+"$APS_PARSER" features/<id>.feature build/<id>.ir.json
 APS_FEATURE_PATH=features/<id>.feature \
-  "$APS_GENERATOR" build/acceptance/<id>.ir.json acceptance/generated/<id>
-pytest acceptance/generated/<id> -q          # the PROJECT's pytest, not $APS_VENV's
+  "$APS_GENERATOR" build/<id>.ir.json acceptance/generated/<id>
+"$APS_VENV/bin/pytest" acceptance/generated/<id> -q
 ```
-(`APS_MUTATOR` + `APS_ADAPTER` are the architect's acceptance-mutation gate, run once
-over the whole feature in architect-verify — `gherkin-mutator` drives the project's
-pytest through `$APS_VENV/bin/aps-adapter pytest ...` — not per slice.)
+The generated tests must import BOTH `aps_kit` AND the project's system-under-test, so
+run them with the venv's pytest (it has `aps_kit`) and make the project importable to
+that pytest WITHOUT prepending the venv's whole site-packages to `PYTHONPATH` — that
+would shadow the project's own dependency versions. The clean way: the conftest inserts
+the project's source dir onto `sys.path` (a zero-dep, non-shadowing add), and a project
+that has third-party deps is `pip install`-ed into the venv. (`APS_MUTATOR` +
+`APS_ADAPTER` are the architect's acceptance-mutation gate, run once over the WHOLE
+feature set in architect-verify — `gherkin-mutator` drives the same pytest via
+`$APS_VENV/bin/aps-adapter pytest ...` — not per slice.) This path is Python/pytest
+only; no other stack is wired.
 
 ## The step-handler glue (the specifier authors it — load-bearing)
-The kit's `aps_kit` ships an EMPTY `default_registry`, so a freshly generated
-acceptance test reds with `UnsupportedStepError` (a HARNESS gap, not the behavior)
-until step handlers are registered. So AFTER parser → generator, the specifier authors
-a slice-scoped glue file — a `conftest.py` in the generated acceptance dir
-(`acceptance/generated/<id>`) — that:
-- registers a handler for EACH Gherkin step keyed by its EXACT IR `text` (the strings
-  from the parsed IR JSON, NOT the raw `.feature`);
+`aps_kit.default_registry` starts EMPTY, so a freshly generated acceptance test reds
+with `UnsupportedStepError` (a HARNESS gap, not the behavior) until handlers register.
+AND it is a global SINGLETON whose `.step()` raises `ValueError("duplicate step
+handler")` on a repeated step text, while bare pytest auto-loads EVERY generated
+`conftest.py` — so two features sharing any step text (e.g. `a calculator`) would error
+the whole gate at collection. So AFTER parser → generator, the specifier authors a
+slice-scoped `conftest.py` in the generated acceptance dir (`acceptance/generated/<id>`)
+that:
+- builds a PER-FEATURE `Registry()` — NEVER `default_registry` — and routes the
+  generated test to it with an autouse fixture
+  (`monkeypatch.setattr(aps_kit.runtime, "default_registry", registry)`). The generated
+  test calls `run_execution(ir, s, e)` with no registry arg, so this is what isolates
+  features that share step text. NO kit change is needed: `run_execution` already
+  accepts a per-feature `registry`. (`examples/aps-step-isolation` is the runnable
+  regression for this.)
+- registers a handler for EACH Gherkin step keyed by its EXACT IR `text` — placeholders
+  and all (`I subtract <b> from <a>`), from the parsed IR JSON, NOT the raw `.feature`;
 - binds the When-step to a REAL call into the system-under-test (e.g.
-  `calc.subtract(...)`) so the test reds for the RIGHT reason — behavior absent →
-  `AttributeError` — and greens on the obvious implementation the coder writes;
-- reads each example / expected VALUE FROM THE IR example cells, NEVER hardcoded. This
-  is load-bearing: `gherkin-mutator` mutates the example cells, so a handler that
-  hardcoded values would let mutants survive (vacuous acceptance). Reading from the IR
-  is what lets the acceptance suite actually KILL mutants.
+  `world["calc"].subtract(int(ex["a"]), int(ex["b"]))`) so the test reds for the RIGHT
+  reason — behavior absent → `AttributeError` — and greens on the obvious implementation
+  the coder writes;
+- reads each example / expected VALUE FROM THE IR example row `ex`, NEVER hardcoded.
+  Load-bearing: `gherkin-mutator` mutates the example cells, so a handler that hardcoded
+  values would let mutants survive (vacuous acceptance). Reading from `ex` is what kills
+  them.
 The derived `build/<id>.ir.json` is a gitignored intermediate, regenerated per run (the
 specifier adds `build/` to the target `.gitignore`). The specifier's committed
 deliverable is the `.feature` + the generated entrypoint + the `conftest.py` glue, RED

@@ -31,11 +31,22 @@ ignore the runtime scratch, track the lock); present file → reclassify every s
 from its persisted phase + git ground truth + gate result and RESUME. Never restart
 from zero; never re-dispatch a slice that already holds the relevant commit.
 
-## 1. Create or adopt the integration branch
+## 1. Create or adopt the integration branch, then COMMIT THE LOCK onto it
 One branch carries the whole feature: `bottega/<slug>`. Fresh run: branch it off the
 agreed base commit and record it + the integration HEAD. Resume: ADOPT the existing
 branch at its reconciled HEAD. Every wave branches its slice worktrees off the CURRENT
 integration HEAD (via fanout).
+
+The integration branch is the branch pr-assemble pushes, so the APS lock BOOTSTRAP
+wrote must be committed ONTO it (else it is absent from a fresh clone and the
+"pinned/reproducible" claim is false). As the FIRST commit on a fresh integration
+branch, stage and commit the lock from the target root:
+```sh
+git -C "$TARGET_ROOT" add -f .bottega/aps.lock          # tracked despite the .bottega/* ignore
+git -C "$TARGET_ROOT" commit -m "bottega: pin APS toolchain (.bottega/aps.lock)"
+```
+Confirm `git -C "$TARGET_ROOT" ls-files --error-unmatch .bottega/aps.lock` succeeds
+before any wave. pr-assemble re-checks this before opening the PR.
 
 ## 2. Spine first (sequential)
 Land the spine slices onto the integration branch ONE at a time, before any wave. A
@@ -46,29 +57,30 @@ to `contract_landed` (not `done`), unblocks its dependents, and keeps a tracked
 follow-up implementation slice until it reaches `integrated`. Re-green the gates after
 each spine landing; advance the integration HEAD.
 
-## 3. The wave loop
+## 3. The wave loop — integrate-or-dispatch
 Repeat until the DAG drains. Each pass:
-- **Classify** every not-`done` slice from registry-state's phase machine.
-- **Integrate first.** Any slice in `ready_to_integrate` (a finished slice, e.g. one
-  that completed just before a crash) goes STRAIGHT to **integrate-wave**; it is NOT
-  re-dispatched.
-- **Ready set** = every slice whose producers are all `integrated`/`contract_landed`
-  and whose phase is `pending` (or a running phase that resume kicked back). Excludes
-  `ready_to_integrate`, `integrated`, `contract_landed`, and the post-handback phases.
-- **Fan out the wave.** Call **fanout** for the ready set up to K: it spins one
-  worktree per ready slice off the current integration HEAD, then runs each slice's
-  **run-slice-pipeline** — the coordinator's 3-role dispatch SEQUENCE (specifier →
-  coder → refactorer, SEPARATE sessions, a handback between each). The K-parallelism
-  is ACROSS slices (K slices' pipelines advancing at once), never multiple roles in
-  one session. fanout records each slice's phase + per-role `conversation_id`s and
-  PERSISTS before the turn ends.
-- **Collect.** Each slice that finishes its pipeline reaches `ready_to_integrate`
-  (refactorer handback + gates green at its `green_head`).
-- **Integrate the wave.** Call **integrate-wave** to dup-scan, merge each
-  `ready_to_integrate` slice into the integration branch one at a time, and re-green
-  the gates. It REJECTS anything not `ready_to_integrate`. This advances the
-  integration HEAD; mark each merged slice `integrated` and PERSIST.
-- **Recompute** the ready set off the fresh HEAD and loop.
+- **Classify** every not-`done` slice by its SETTLED phase (registry-state). A running
+  marker left by a dead run falls back to its last settled phase first.
+- **Integrate-or-dispatch off the ready set.** Use registry-state's ONE ready-set
+  definition — do not restate it. For each slice in it, take its next action:
+  `ready_to_integrate` → hand to **integrate-wave** (merge, never re-dispatch);
+  `pending` → dispatch specifier; `spec_done` → dispatch coder; `coder_green` →
+  dispatch refactorer. Because every non-terminal SETTLED phase is dispatchable from
+  itself, a slice stranded at `spec_done`/`coder_green` by a crash is picked up here —
+  the run cannot stall after a handback.
+- **Fan out the dispatches.** Call **fanout** for the slices being dispatched, up to K:
+  it spins one worktree per slice off the current integration HEAD and runs each
+  slice's **run-slice-pipeline** — the coordinator's 3-role dispatch SEQUENCE
+  (specifier → coder → refactorer, SEPARATE sessions, a handback between each). The
+  K-parallelism is ACROSS slices, never multiple roles in one session. fanout sets each
+  slice's running marker + per-role `conversation_id`s and PERSISTS before the turn ends.
+- **Collect.** Each verified handback SETTLES the slice to the next phase (per
+  registry-state); a slice that finishes its pipeline settles at `ready_to_integrate`.
+- **Integrate the wave.** **integrate-wave** dup-scans, merges each
+  `ready_to_integrate` `slice/*` one at a time, re-greens, and records `integrated_head`
+  + `integration_gate: pass`. It REJECTS anything not `ready_to_integrate`. This
+  advances the integration HEAD; PERSIST.
+- **Recompute** off the fresh HEAD and loop.
 
 ## 4. Finish
 When the DAG has drained — every slice `integrated`/`done`, no `contract_landed` spine

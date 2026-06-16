@@ -9,12 +9,22 @@ After architect-verify SIGNS OFF, the whole feature sits on the integration bran
 `bottega/<slug>` at a green HEAD. The coordinator opens ONE PR and the run ends. This
 is the team's only end state.
 
-## Preconditions (all true before you open the PR)
+## Preconditions (all true before you open the PR — REFUSE otherwise)
 - architect-verify returned SIGN-OFF — not a bounce, and not mid bounce-loop.
 - Every slice is `integrated`/`done` (the DAG drained) and no `contract_landed` spine
   has an unfinished implementation follow-up (see registry-state).
 - The full gate suite is green at the current `integration_head`. RE-RUN the gates
   yourself at that HEAD — do not infer green from a worker handback.
+- **The APS lock is TRACKED on the branch being pushed.** Verify
+  `git -C "$TARGET_ROOT" ls-files --error-unmatch .bottega/aps.lock` succeeds (slice-
+  wavefront commits it onto the integration branch). If it fails — the lock is untracked
+  or absent — STOP and commit it before proceeding; an untracked lock means the PR is
+  not reproducible.
+- **The verification evidence exists.** The registry `verification` block names the
+  evidence dir and the three artifact paths (`source_mutation`, `dry`,
+  `acceptance_mutation`), `verdict == "sign-off"`, and each file actually exists on
+  disk. If any artifact is missing, REFUSE to open the PR — a sign-off without persisted
+  evidence is not a sign-off.
 
 ## Open exactly one PR
 First PUSH the integration branch to set an upstream (the PR step needs a remote

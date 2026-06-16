@@ -37,14 +37,15 @@ Emit one `sys_session_send` per item IN THE SAME TURN. A fresh slice-specific
 continue feedback on the SAME item + SAME role. Each `args.input` is item-scoped —
 the worktree path, branch + base sha, the slice's spec/contract, gate commands, and
 the resolved APS paths — NEVER another item's session or diff. Record each dispatch's
-`conversation_id`, mark the item's phase to its running state, PERSIST, then end the
-turn. The inbox wakes you; never busy-poll, never poll with timers.
+`conversation_id`, set the item's transient RUNNING MARKER (a dispatch never settles a
+phase — registry-state), PERSIST, then end the turn. The inbox wakes you; never
+busy-poll, never poll with timers.
 
 ## 4. Collect K handbacks
 Workers finish and wake you via `sys_read_inbox`. For each handback: confirm its
 CHANGED-FILES `git diff --stat` is present (ask before advancing if it is missing),
-record it in the slice's `handbacks[]` + `last_handback`, advance the slice's phase,
-and PERSIST. Cancel a dark, runaway, or superseded worker with
+record it in the slice's `handbacks[]` + `last_handback`, and SETTLE the slice to its
+next phase on that verified handback (per registry-state), then PERSIST. Cancel a dark, runaway, or superseded worker with
 `sys_cancel_task(task_id=<conversation_id>)`.
 
 ## Width and the dispatch cap

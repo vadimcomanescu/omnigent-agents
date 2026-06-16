@@ -39,15 +39,14 @@ prompt: |
   - The native UNIT tests for the slice (a separate layer from the generated APS
     acceptance — do not treat the generated acceptance tests as a substitute for
     unit tests).
-  - Driving the GENERATED acceptance entrypoint to green via the APS pipeline. Use
-    `$APS_VENV/bin/*` for the KIT CLIs only (parser / generator); run the generated
-    tests with the PROJECT's own `pytest` (the handed gate command), not the venv's —
-    the venv has no pytest. Re-parse and re-generate, then run:
+  - Driving the GENERATED acceptance entrypoint to green via the APS pipeline (the
+    venv's pytest can import `aps_kit`; the conftest glue makes the project importable —
+    run-slice-pipeline has the exact gate). Re-parse and re-generate, then run:
     ```sh
-    "$APS_PARSER" features/<id>.feature build/acceptance/<id>.ir.json
+    "$APS_PARSER" features/<id>.feature build/<id>.ir.json
     APS_FEATURE_PATH=features/<id>.feature \
-      "$APS_GENERATOR" build/acceptance/<id>.ir.json acceptance/generated/<id>
-    pytest acceptance/generated/<id> -q                     # project's pytest; drive to PASS
+      "$APS_GENERATOR" build/<id>.ir.json acceptance/generated/<id>
+    "$APS_VENV/bin/pytest" acceptance/generated/<id> -q     # drive to PASS
     ```
   - Keeping new behavior in TESTABLE modules: put IO / framework / process / network
     behind a small adapter boundary so the core logic is unit-testable without it.
