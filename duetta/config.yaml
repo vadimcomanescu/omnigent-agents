@@ -1,10 +1,9 @@
-# Duetta, the two-voice brainstorming partner.
+# Duetta — the two-headed brainstorming partner.
 #
 # Duetta never answers from a single model. Every question she receives is
 # fanned out to BOTH a Claude sub-agent and a GPT sub-agent — two plain
-# (non-coding) responders running on the claude-sdk and codex harnesses (the
-# GPT head drives the local Codex CLI) — and she shows you what each one
-# thinks, side by side.
+# (non-coding) responders running on the claude-sdk and codex harnesses —
+# and she shows you what each one thinks, side by side.
 #
 # Load the `debate` skill (highlighted as a chip on her empty surface) to
 # have the two partners critique each other's answers for a configurable
@@ -13,21 +12,19 @@
 # Usage:
 #   omnigent run duetta/
 #
-# Duetta's two voices run on the claude-sdk and codex harnesses, so make sure
-# both CLIs are logged in first: a Claude provider (a `claude` subscription
-# login or ANTHROPIC_API_KEY) and the Codex CLI (`codex login`, ChatGPT
-# subscription). The GPT head uses the Codex CLI's own login, so no
-# OPENAI_API_KEY is required.
+# Duetta's two heads run on the claude-sdk and codex harnesses, so configure a
+# Claude provider first (e.g. `omnigent setup`, a Claude subscription login, or
+# ANTHROPIC_API_KEY) and log the local Codex CLI in with `codex login`.
 
 spec_version: 1
 name: duetta
 description: >-
-  A two-voice brainstorming partner. Duetta sends every question to both a
+  A two-headed brainstorming partner. Duetta sends every question to both a
   Claude and a GPT sub-agent and shows you both perspectives. With the
   `debate` skill she has them critique each other for N rounds before
   converging on a synthesis.
 
-# Duetta's coordinator runs on the Claude Agent SDK. She does no substantive
+# Duetta's "brain" runs on the Claude Agent SDK. She does no substantive
 # thinking of her own on the user's question — she orchestrates the two
 # partners, lays out both views, and (under `debate`) runs the critique
 # loop and synthesizes. No model is pinned, so the claude-sdk harness runs on
@@ -41,7 +38,7 @@ executor:
     harness: claude-sdk
 
 prompt: |
-  You are Duetta, a brainstorming partner with two voices. You never answer a
+  You are Duetta, a brainstorming partner with two heads. You never answer a
   question from a single model's point of view. You have exactly two plain
   sub-agents — neither is a coding agent; each is a pure responder:
   - `claude` — a Claude responder (claude-sdk harness).
@@ -116,13 +113,36 @@ prompt: |
 async: true
 cancellable: true
 
-# Duetta only orchestrates the two responders and formats their output; she
-# needs no filesystem, shell, or terminals of her own.
+# Duetta orchestrates the two responders and formats their output. She also has
+# filesystem access so she can read reference material and save the side-by-side
+# results she produces. Declaring ``os_env`` registers the ``sys_os_read`` /
+# ``sys_os_write`` / ``sys_os_edit`` / ``sys_os_shell`` tools (filesystem access
+# comes bundled with a shell). ``sandbox: type: none`` runs unsandboxed in the
+# caller's working directory.
+os_env:
+  type: caller_process
+  cwd: .
+  sandbox:
+    type: none
+
+# Same blast-radius guardrail Polly uses, so Duetta's shell behaves identically:
+# the catastrophic set (force-push, ``rm -rf /``, hard-reset to a remote ref) is
+# denied outright, while everything else runs without an ASK
+# (``gate_pushes: false``).
+guardrails:
+  policies:
+    blast_radius:
+      type: function
+      on: [tool_call]
+      function:
+        path: omnigent.inner.nessie.policies.blast_radius
+        arguments:
+          gate_pushes: false
 
 tools:
-  # The two plain brainstorming partners — see agents/<name>/. Both are pure
-  # responders (told not to use tools); claude runs on claude-sdk, gpt on
-  # the codex harness (local Codex CLI).
+  # The two brainstorming partners — see agents/<name>/. Both reason and write,
+  # and each has its own filesystem access (`os_env`); claude runs on claude-sdk,
+  # gpt on codex.
   agents:
     - claude
     - gpt

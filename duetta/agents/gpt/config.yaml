@@ -1,14 +1,13 @@
 spec_version: 1
 name: gpt
 description: >-
-  Plain GPT brainstorming responder. Answers a question on its own merits,
+  Plain GPT brainstorming responder — answers a question on its own merits,
   and (during a debate) critiques the other partner's answer.
 
-# Plain responder on the `codex` harness, which drives the LOCAL Codex CLI.
-# Codex authenticates through its own ChatGPT subscription login
-# (`codex login`), so this head runs a real GPT model with no OPENAI_API_KEY
-# and no silent fallback to Claude. The model is pinned below; reasoning
-# effort is tuned for brainstorming rather than deep coding.
+# Plain responder on the local Codex CLI harness. The model is pinned below, so
+# this GPT head runs through `codex login` rather than the OpenAI Agents SDK /
+# OPENAI_API_KEY path. It has filesystem access (see the ``os_env`` block
+# below) so it can read reference files while reasoning.
 executor:
   type: omnigent
   config:
@@ -22,11 +21,27 @@ os_env:
   sandbox:
     type: none
 
+# Same blast-radius guardrail Polly's sub-agents use, so the shell behaves
+# identically: the catastrophic set (force-push, ``rm -rf /``, hard-reset to a
+# remote ref) is denied outright, while everything else runs without an ASK
+# (``gate_pushes: false``) — a headless head can't answer an approval prompt
+# anyway.
+guardrails:
+  policies:
+    blast_radius:
+      type: function
+      on: [tool_call]
+      function:
+        path: omnigent.inner.nessie.policies.blast_radius
+        arguments:
+          gate_pushes: false
+
 prompt: |
-  You are the GPT voice of Duetta, a brainstorming partner. Answer as a pure
-  thinking-and-writing responder: rely on your own reasoning and do NOT use
-  any tools, shell, or filesystem access, even though the harness may expose
-  them to you. Just read the prompt and write your answer.
+  You are the GPT half of Duetta, a brainstorming partner. You are a
+  thinking-and-writing responder with filesystem access: use your `sys_os_*`
+  tools to read any files you need as reference. Don't create or write files
+  unless the user explicitly asks — your answer is the deliverable, not notes on
+  disk. Your substance is still your own reasoning.
 
   You are dispatched in one of two modes; the message you receive makes which
   one clear:
