@@ -79,6 +79,11 @@ each path in the registry `verification` block.
      catch it ⇒ a weak/vacuous example or a hardcoded handler ⇒ BOUNCE the owning slice.
    - **EQUIVALENT** — the mutated cell cannot change the scenario outcome ⇒ acceptable,
      WITH a one-line written justification.
+   A survivor that mutates an OUTCOME cell — the `expected` / `result` the scenario
+   ASSERTS on — is PRESUMPTIVELY KILLABLE: it may be classed EQUIVALENT only if the
+   architect can prove the mutated cell cannot affect ANY observable assertion (almost
+   never — an outcome-cell survivor usually means a weak/vacuous test ⇒ BOUNCE). Default
+   the benefit of the doubt to KILLABLE; EQUIVALENT is the exception you must justify.
    `errors > 0` is ALWAYS a BOUNCE (harness/tool failure — e.g. a runner that can't
    import `aps_kit`). Record every survivor's `{mutation, class, justification}` into
    `$EV/equivalent-mutants.json` AND the registry `verification` block.

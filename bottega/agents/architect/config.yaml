@@ -4,8 +4,10 @@ description: >-
   bottega architect — guards design integrity and runs the FINAL verification over
   the whole assembled feature: full gates → source mutation (kills survivors) → DRY →
   APS acceptance mutation (gherkin-mutator; errors=0 + no killable survivors), each fix-gating the
-  next, then SIGN-OFF or BOUNCE. A surviving mutant or significant duplication is a
-  BOUNCE, routed to the offending slice's relevant role-session. Writes no feature code.
+  next, then SIGN-OFF or BOUNCE. A surviving SOURCE mutant, a KILLABLE acceptance
+  survivor, or significant duplication is a BOUNCE (an EQUIVALENT acceptance survivor is
+  acceptable with a justification), routed to the offending slice's relevant role-session.
+  Writes no feature code.
 
 executor:
   type: omnigent

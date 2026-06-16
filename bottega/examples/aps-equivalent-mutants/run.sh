@@ -48,8 +48,20 @@ set -e
 
 echo "### exit code: $rc (1 is expected — survivors present; the architect classifies them)"
 grep -E "^total=|^survived|^killed" mut.out
-killed="$(grep -cE '^killed' mut.out || true)"
-survived="$(grep -cE '^survived' mut.out || true)"
-[ "$killed" -ge 1 ]   || { echo "FAIL: expected >=1 killed (gate must still bite)"; exit 1; }
-[ "$survived" -ge 1 ] || { echo "FAIL: expected equivalent survivors to demonstrate the gate"; exit 1; }
-echo "OK — $killed killed, $survived survived (classified in equivalent-mutants.json)"
+
+# EXACT summary — a regression in the gate numbers must fail here, not slip through.
+summary="$(grep -E '^total=' mut.out | tail -1)"
+echo "summary: $summary"
+[ "$summary" = "total=4 killed=1 survived=3 errors=0" ] \
+  || { echo "FAIL: expected exactly 'total=4 killed=1 survived=3 errors=0'"; exit 1; }
+# the ONE killed must be the load-bearing divisor cell (proves the gate still bites)
+grep -qE '^killed[[:space:]]+\$\.scenarios\[1\]\.examples\[0\]\.b: 0 -> ' mut.out \
+  || { echo "FAIL: the killed mutant must be the divisor cell scenarios[1].examples[0].b"; exit 1; }
+# the 3 survivors must be exactly the equivalents: both non-numeric operands + the dividend
+for m in '\$\.scenarios\[0\]\.examples\[0\]\.a:' \
+         '\$\.scenarios\[0\]\.examples\[0\]\.b:' \
+         '\$\.scenarios\[1\]\.examples\[0\]\.a:'; do
+  grep -qE "^survived[[:space:]]+$m" mut.out \
+    || { echo "FAIL: missing the expected EQUIVALENT survivor $m"; exit 1; }
+done
+echo "OK — total=4 killed=1 survived=3 errors=0; killed=divisor cell; 3 equivalent survivors as classified"
