@@ -58,10 +58,22 @@ Do not guess contracts. Use the **investigate** skill to read the target repo so
 A DAG built on guessed edges either over-serializes (false dependencies) or
 breaks at integration (missed ones).
 
+## When the specifier runs, and what it produces (no contradiction)
+The specifier runs in TWO distinct modes; keep them straight:
+- **At PLANNING (here):** it pairs with the coordinator to turn the PRD into testable
+  externally-visible BEHAVIOR and proposes where the behavior boundaries fall —
+  per-boundary, a one-line behavior plus the acceptance scenario(s) covering it. It
+  does NOT author any slice's Gherkin `.feature` or its failing acceptance entrypoint
+  yet, and it does NOT own the slice plan.
+- **PER SLICE (run-slice-pipeline):** once the coordinator dispatches a slice, the
+  specifier authors THAT slice's Gherkin `.feature` and generates its FAILING
+  acceptance entrypoint with the APS kit. Acceptance tests are authored per slice, not
+  up front.
+
 ## Hand off
-- The specifier returns the behavior spec, acceptance criteria, the FAILING
-  acceptance tests it can author up front, and the proposed behavior boundaries.
+- The specifier returns the behavior spec, the acceptance scenarios (as proposed
+  behavior, not yet committed feature files), and the proposed behavior boundaries.
 - The COORDINATOR owns the final ordered DAG: it accepts, splits, or re-tags the
-  proposed boundaries, then writes the slices, edges, and spine tags into the
-  registry. That DAG drives the build directly — the wavefront proceeds from it
-  automatically, with no human approval gate.
+  proposed boundaries, then writes the slices, edges, and spine tags into the registry
+  (the registry-state schema). That DAG drives the build directly — the wavefront
+  proceeds from it automatically, with no human approval gate.

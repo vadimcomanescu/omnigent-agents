@@ -1,126 +1,161 @@
 ---
 name: bootstrap-aps
-description: Load when the coordinator dispatches the bootstrapper ONCE before the first slice wave. The idempotent verify-then-install procedure, run from the TARGET repo root, that makes the pinned APS toolchain (gherkin-parser + gherkin-mutator) present and SHA-256-verified in `<target>/.bottega/bin/`, records them in `.bottega/aps.lock`, and reports their resolved ABSOLUTE paths — a NO-OP when the lock is already valid.
+description: The BOOTSTRAP step the COORDINATOR runs itself (it has shell), ONCE before the first slice wave, from the TARGET repo root. The idempotent verify-then-install procedure that makes the APS toolchain present and pinned — the two SHA-256-verified Go binaries (gherkin-parser + gherkin-mutator) in `.bottega/bin/`, AND a pinned Python 3.12 venv at `.bottega/aps-venv` holding the kit's language package (aps-kit → acceptance-entrypoint-generator + aps-adapter) and the source-mutation tool (mutmut) — records all of it in `.bottega/aps.lock`, and resolves the ABSOLUTE paths threaded into every slice. A NO-OP only when the lock, binaries, venv interpreter, and language package ALL verify.
 ---
 
-# bootstrap-aps — make the APS toolchain present, verified, and recorded
+# bootstrap-aps — pin the APS toolchain, verify, record, resolve
 
-Run from the TARGET repo root (not a slice worktree). The goal is narrow: after
-this runs, `gherkin-parser` and `gherkin-mutator` exist in `<target>/.bottega/bin/`,
-their SHA-256 digests are recorded in `<target>/.bottega/aps.lock`, and the resolved
-ABSOLUTE paths are handed back. The procedure is IDEMPOTENT — it verifies before it
-installs, so a re-run with a valid lock is a NO-OP. It installs the TOOLS only; it
-never generates or runs Gherkin against the project (a deliberate follow-on).
+The coordinator runs this DIRECTLY at the BOOTSTRAP step (there is no bootstrapper
+role) from the TARGET repo root — not a slice worktree. After it runs, the APS tools
+exist and are pinned, `.bottega/aps.lock` records exactly what landed, and the
+resolved ABSOLUTE paths are in the registry's `aps` block for every slice dispatch.
+It installs the TOOLS only; it never generates or runs Gherkin against the project
+(that is the specifier/coder/architect's job per slice). It is IDEMPOTENT — a re-run
+with a fully valid lock is a NO-OP — so a resumed run re-runs it cheaply instead of
+tracking a separate "already bootstrapped" flag.
+
+## Why a pinned venv (not system pip)
+The kit's Python package needs **Python >= 3.10**; a typical system `pip3` is 3.9 and
+fails to install it, while an unpinned `uv`/`pipx` run has drifted to 3.14, where
+`mutmut` crashes. So the language package and the source-mutation tool go into a venv
+pinned to **3.12** — never system pip, never an unpinned interpreter.
+
+## What gets pinned (Python stack)
+1. **Two Go binaries** — `gherkin-parser` and `gherkin-mutator` — into
+   `<target>/.bottega/bin/`, SHA-256-verified, language-agnostic (used by every
+   stack). These come from the kit's `install.sh` (verified prebuilt downloads; no Go
+   toolchain needed).
+2. **A pinned venv** at `<target>/.bottega/aps-venv` (Python 3.12) holding:
+   - **`aps-kit`** (the kit's Python package, tag `v0.1.0`) → the console scripts
+     `acceptance-entrypoint-generator` and `aps-adapter`;
+   - **`mutmut`** → the source-mutation tool the architect runs.
+
+(TypeScript stack: the binaries are identical; instead of the venv, install the kit's
+`typescript/` package and Stryker via the project's npm and record them in the lock's
+`toolchain` block in the same shape. The rest of this procedure is written for the
+Python path, which the samples exercise.)
 
 ## The pinned kit
-- `github.com/vadimcomanescu/acceptance-pipeline-kit` at tag **`v0.1.0`** (pinned —
-  never `main`, never a floating tag).
-- Its `install.sh` detects OS/arch, downloads the prebuilt `gherkin-parser` and
-  `gherkin-mutator` from the GitHub Release, **checksum-verifies** them, and installs
-  them into `--bin-dir` (default `$HOME/.local/bin`). Flags: `--version <tag>`,
-  `--bin-dir <dir>`. The base URL is overridable via `APS_DIST_BASE_URL`. No Go
-  toolchain is needed — the binaries arrive as verified downloads.
-- Per-language packages live under `python/`, `typescript/`, `go/`, `rust/` in a
-  clone of the kit at the tag.
+- `github.com/vadimcomanescu/acceptance-pipeline-kit` at tag **`v0.1.0`** — pinned,
+  never `main`, never a floating tag.
+- `install.sh` flags: `--version <tag>`, `--bin-dir <dir>`; base URL overridable via
+  `APS_DIST_BASE_URL`. It fetches exactly `gherkin-parser` + `gherkin-mutator`,
+  checksum-verifies them, and installs them into `--bin-dir`.
+- The Python package is installed from the repo subdirectory (no PyPI):
+  `git+https://github.com/vadimcomanescu/acceptance-pipeline-kit@v0.1.0#subdirectory=python`.
 
 ## The required tool set
-The lock is only valid if it RECORDS the full required tool set — **both**
-`gherkin-parser` AND `gherkin-mutator` — each at its expected `.bottega/bin/<tool>`
-path. A lock missing either required entry is INVALID, no matter how well the
-entries it *does* record verify.
+The lock is valid only if it RECORDS the FULL required set: both binaries
+(`gherkin-parser`, `gherkin-mutator`) AND the venv (interpreter at the pinned version
++ `aps-kit` at its recorded version). A lock missing any required entry is INVALID no
+matter how well the entries it does record verify.
 
 ## Procedure (idempotent — safe to re-run)
-1. **Read the lock.** If `.bottega/aps.lock` exists, load it. Absent lock -> go
-   straight to install (step 5).
-2. **Verify the required tool set.** For EACH required tool (`gherkin-parser`,
-   `gherkin-mutator`): confirm the lock has an entry for it at `.bottega/bin/<tool>`,
-   the binary exists at that path, and its recomputed SHA-256 (`shasum -a 256 <path>`
-   or `sha256sum <path>`) equals the recorded `sha256`. A required entry that is
-   ABSENT from the lock, a missing binary, or a checksum mismatch invalidates the
-   lock — go to install (step 5). Do not let extra/unknown `tools[]` entries
-   substitute for a missing required one.
-3. **Detect the stack.** Inspect the target root (read-only):
-   - `pyproject.toml` / `setup.py` / `requirements.txt` -> **python**
-   - `package.json` / `tsconfig.json` -> **typescript**
-   - `go.mod` -> **go**
-   - `Cargo.toml` -> **rust**
-4. **NO-OP test.** No-op ONLY when ALL of these hold:
-   - the lock is present, AND
-   - it RECORDS the full required tool set — both `gherkin-parser` and
-     `gherkin-mutator` — at their `.bottega/bin/<tool>` paths, AND
-   - each of those required binaries exists, AND
-   - each required binary's checksum matches its recorded `sha256`, AND
-   - the lock's `stack` covers the detected stack.
-   When all hold -> you are done: report ok and the resolved ABSOLUTE paths; touch
-   nothing (no fetch, no re-write of the lock). If ANY condition fails — including a
-   required tool entry absent from the lock — do NOT no-op; proceed to install
+
+1. **Read the lock.** If `.bottega/aps.lock` exists, load it. Absent → install
    (step 5).
-5. **Otherwise BOOTSTRAP.**
-   - Ensure `.bottega/bin/` exists (`mkdir -p .bottega/bin`).
-   - Fetch the pinned kit at `v0.1.0` and install the binaries into `.bottega/bin/`,
-     e.g.:
+2. **Detect the stack** (read-only): `pyproject.toml`/`setup.py`/`requirements.txt` →
+   **python**; `package.json`/`tsconfig.json` → **typescript**.
+3. **Verify the binaries.** For EACH of `gherkin-parser`, `gherkin-mutator`: confirm
+   the lock has an entry at `.bottega/bin/<tool>`, the binary exists there, and its
+   recomputed SHA-256 (`shasum -a 256 <path>` / `sha256sum <path>`) equals the
+   recorded `sha256`. Any absent entry, missing binary, or mismatch → install.
+4. **Verify the venv (full).** All of:
+   - the venv interpreter exists at `<lock.venv.interpreter>` AND its version matches
+     `lock.venv.python_version` (`"$INTERP" --version` → `Python 3.12.x`);
+   - the language package is installed at the recorded version
+     (`"$INTERP" -m pip show aps-kit` → `Version:` equals `lock.venv.packages[aps-kit]`);
+   - `mutmut` is importable/installed in the venv
+     (`"$INTERP" -m pip show mutmut` succeeds);
+   - the console scripts resolve (`<venv>/bin/acceptance-entrypoint-generator` and
+     `<venv>/bin/aps-adapter` exist and are executable).
+   Any failure → install.
+5. **NO-OP test.** No-op ONLY when ALL hold: lock present; both binaries recorded,
+   present, and checksum-matching; the venv interpreter present at the pinned version;
+   the language package installed at the recorded version (and `mutmut` present); the
+   console scripts resolve; AND `lock.stack` covers the detected stack. When ALL hold
+   → done: report ok and the resolved ABSOLUTE paths; touch nothing. If ANY condition
+   fails → do NOT no-op; install (step 6). Missing a binary, a checksum, the venv
+   interpreter at the right version, OR the language package each forces a real
+   (re)install — never a no-op.
+6. **Install.**
+   - `mkdir -p .bottega/bin`.
+   - Binaries — verified prebuilt download into the target's `.bottega/bin/`:
      ```sh
-     # binaries — SHA-256-verified prebuilt download, into the target's .bottega/bin
      curl -fsSL https://raw.githubusercontent.com/vadimcomanescu/acceptance-pipeline-kit/v0.1.0/install.sh \
        | sh -s -- --version v0.1.0 --bin-dir "$(pwd)/.bottega/bin"
      ```
-     (or clone the kit at the tag and run `./install.sh --version v0.1.0 --bin-dir
-     <target>/.bottega/bin`). install.sh checksum-verifies the download and prints
-     `installed <tool> -> <path>` for each binary.
-   - **Verify what landed.** Recompute the SHA-256 of `.bottega/bin/gherkin-parser`
-     and `.bottega/bin/gherkin-mutator` and keep the digests — install.sh already
-     verified the download, but you record the digest you OBSERVE on disk.
-   - **Per-language package.** Clone the kit at the tag and install the package for
-     the DETECTED stack from its `python/` / `typescript/` / `go/` / `rust/` tree as
-     that stack needs (e.g. the language adapter/generator the slices will call).
-     Install only the detected stack's package, not all four.
-6. **Write the lock.** Write/update `.bottega/aps.lock` (JSON) with paths
-   repo-relative as `.bottega/bin/<tool>`:
+     install.sh checksum-verifies the download and prints `installed <tool> -> <path>`.
+   - Pinned venv — create at 3.12 and install the language package + mutmut INTO it
+     (never system pip):
+     ```sh
+     uv venv --python 3.12 .bottega/aps-venv
+     uv pip install --python .bottega/aps-venv/bin/python \
+       "git+https://github.com/vadimcomanescu/acceptance-pipeline-kit@v0.1.0#subdirectory=python"
+     uv pip install --python .bottega/aps-venv/bin/python mutmut
+     ```
+     (If `uv` is unavailable, the equivalent is `python3.12 -m venv .bottega/aps-venv`
+     then `.bottega/aps-venv/bin/python -m pip install <same two installs>`.)
+   - **Verify what landed.** Recompute the SHA-256 of both `.bottega/bin/*` binaries;
+     read the installed `aps-kit` version (`... -m pip show aps-kit`) and the venv's
+     `python --version`. Record exactly what you OBSERVE on disk.
+7. **Write the lock** (`.bottega/aps.lock`, JSON, written atomically — temp file then
+   move). Binary paths are repo-relative (portable, checksummed). The venv is
+   machine-local and non-relocatable, so its interpreter/venv/entrypoint paths are
+   recorded ABSOLUTE; resume re-verifies them and rebuilds the venv if they no longer
+   resolve.
    ```json
    {
      "kit": "github.com/vadimcomanescu/acceptance-pipeline-kit",
      "tag": "v0.1.0",
-     "stack": "python|typescript|go|rust",
-     "tools": [
+     "stack": "python",
+     "binaries": [
        {"name": "gherkin-parser",  "path": ".bottega/bin/gherkin-parser",  "sha256": "<hex>"},
        {"name": "gherkin-mutator", "path": ".bottega/bin/gherkin-mutator", "sha256": "<hex>"}
      ],
-     "bootstrapped_at": "<UTC ISO-8601, e.g. 2026-06-16T12:00:00Z>"
+     "venv": {
+       "path": "<target-abs>/.bottega/aps-venv",
+       "interpreter": "<target-abs>/.bottega/aps-venv/bin/python",
+       "python_version": "3.12.x",
+       "packages": [
+         {"name": "aps-kit", "version": "0.1.0"},
+         {"name": "mutmut",  "version": "<observed>"}
+       ],
+       "entrypoints": {
+         "acceptance-entrypoint-generator": "<target-abs>/.bottega/aps-venv/bin/acceptance-entrypoint-generator",
+         "aps-adapter": "<target-abs>/.bottega/aps-venv/bin/aps-adapter"
+       }
+     },
+     "bootstrapped_at": "<UTC ISO-8601>"
    }
    ```
-   Write it atomically (write a temp file, then move it into place) so a crash never
-   leaves a half-written lock.
-7. **gitignore.** Ensure the target repo keeps `.bottega/aps.lock` TRACKED while the
-   binaries and the rest of the runtime scratch stay ignored. Because a whole-dir
-   ignore (`.bottega/`) cannot re-include a child, use a contents ignore with a
-   negation so the committed lock survives:
+8. **gitignore.** Keep `.bottega/aps.lock` TRACKED while the binaries, the venv, and
+   the rest of the runtime scratch stay ignored. A whole-dir ignore can't re-include a
+   child, so use a contents-ignore with a negation:
    ```gitignore
    .bottega/*
    !.bottega/aps.lock
    ```
-   The binaries in `.bottega/bin/` are NEVER committed; the lock IS.
-8. **Report or fail loudly.** On success, report STATUS ok and the resolved ABSOLUTE
-   paths (`<target>/.bottega/bin/gherkin-parser`, `<target>/.bottega/bin/gherkin-mutator`).
-   On any failure — download error, checksum mismatch, missing binary — FAIL LOUDLY
-   with the exact command and error, and leave NO half-written lock behind.
+   The binaries in `.bottega/bin/` and the venv in `.bottega/aps-venv/` are NEVER
+   committed; the lock IS.
+9. **Resolve + report, or fail loudly.** Resolve each path the slices need into an
+   ABSOLUTE path and write them into the registry `aps` block + the report:
+   - `APS_PARSER`  = `<target-abs>/.bottega/bin/gherkin-parser`,
+   - `APS_MUTATOR` = `<target-abs>/.bottega/bin/gherkin-mutator`,
+   - `APS_VENV`    = the venv path,
+   - `APS_GENERATOR` = the `acceptance-entrypoint-generator` entrypoint,
+   - `APS_ADAPTER`   = the `aps-adapter` entrypoint.
+   The binary paths are repo-relative in the lock, so RESOLVE them against the target
+   root before threading — a slice worker cd's into `.bottega/wt/<id>`, where a
+   relative path would not resolve. On any failure — download error, checksum
+   mismatch, missing binary, venv create/install failure, wrong interpreter version —
+   FAIL LOUDLY with the exact command and error, and leave NO half-written lock.
 
 ## Idempotency (why a re-run is cheap)
-The lock + on-disk checksums ARE the state. A re-run reads the lock, re-verifies the
-binaries, re-detects the stack, and — if all match and the stack is covered —
-no-ops. So the coordinator can re-dispatch the bootstrapper on a resumed run without
-tracking a separate "already bootstrapped" flag; the second run just confirms and
-returns the same paths. Only a missing binary, a changed checksum, or a stack the
-lock doesn't cover triggers a real (re)install.
-
-## Handoff
-Hand back to the coordinator as structured text:
-- **STATUS:** ok | failed;
-- the resolved ABSOLUTE tool paths — `APS_PARSER=<abs>` and `APS_MUTATOR=<abs>` —
-  which the coordinator threads into every slice dispatch packet;
-- the lock contents you wrote or validated (kit, tag, stack, each tool's sha256);
-- **what you did:** NO-OP (lock already valid) or INSTALLED (which tools + the
-  per-language package for which stack);
-- on **failure:** the exact command + error, and confirmation no partial lock was
-  written.
-Never write feature code, never run Gherkin features or mutation against the
-project, never open or merge a PR.
+The lock + the on-disk checksums + the venv interpreter version + the installed
+package versions ARE the state. A re-run reads the lock, re-verifies all of them,
+re-detects the stack, and no-ops only when everything matches. So the coordinator can
+re-run BOOTSTRAP on a resumed run without a separate flag; the second run just
+confirms and returns the same ABSOLUTE paths. Only a missing binary, a changed
+checksum, a missing/wrong-version interpreter, a missing/wrong-version package, or an
+uncovered stack triggers a real (re)install.
