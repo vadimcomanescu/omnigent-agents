@@ -40,6 +40,11 @@ pass/fail. Apply judgment to those results, not to a re-read of every file.
    (exit 1) is a BOUNCE. This is the mechanism the architect now uses for acceptance
    mutation — it is NOT a "no APS / no Gherkin" exclusion; APS acceptance mutation and
    source mutation are both mandatory and complementary.
+   - **Use a FRESH `--work-dir`.** `gherkin-mutator` caches results per `--work-dir`: a
+     re-run against a populated one reports `skipped_scenarios`/`skipped_mutations`
+     with `total=0` and proves nothing. `rm -rf` the work-dir first; the authoritative
+     result is the run that reports `total=N killed=N` (with `survived=0 errors=0`),
+     never a skipped re-run.
 5. **Verdict** — SIGN-OFF (ship-ready) or BOUNCE.
 
 ## Bounded targeted sub-sessions are allowed

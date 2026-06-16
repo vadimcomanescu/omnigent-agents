@@ -13,10 +13,11 @@ agents on different harnesses — so they are DIFFERENT sessions; one session NE
 the whole specifier → coder → refactorer pipeline.
 
 ## The sequence (the coordinator dispatches each, in order; phases per registry-state)
-1. **specifier** (session A) authors THIS slice's Gherkin `.feature` and GENERATES its
-   FAILING acceptance entrypoint with the APS kit (parser → generator), confirming it
-   fails for the right reason. Hands back → slice goes `specifying` → `spec_done`
-   (`red_head` recorded). APS acceptance is a layer ON TOP of unit tests, not instead.
+1. **specifier** (session A) authors THIS slice's Gherkin `.feature`, GENERATES its
+   FAILING acceptance entrypoint with the APS kit (parser → generator), AND authors the
+   step-handler glue (see below), confirming it fails for the right reason. Hands back →
+   slice goes `specifying` → `spec_done` (`red_head` recorded). APS acceptance is a layer
+   ON TOP of unit tests, not instead.
 2. **coder** (session B) TDD-implements the ENTIRE slice in ONE persistent session
    (see the one-session rule below): drives the generated acceptance entrypoint and
    its native unit tests red → green, committing on green. Hands back → `coding` →
@@ -52,6 +53,26 @@ pytest acceptance/generated/<id> -q          # the PROJECT's pytest, not $APS_VE
 (`APS_MUTATOR` + `APS_ADAPTER` are the architect's acceptance-mutation gate, run once
 over the whole feature in architect-verify — `gherkin-mutator` drives the project's
 pytest through `$APS_VENV/bin/aps-adapter pytest ...` — not per slice.)
+
+## The step-handler glue (the specifier authors it — load-bearing)
+The kit's `aps_kit` ships an EMPTY `default_registry`, so a freshly generated
+acceptance test reds with `UnsupportedStepError` (a HARNESS gap, not the behavior)
+until step handlers are registered. So AFTER parser → generator, the specifier authors
+a slice-scoped glue file — a `conftest.py` in the generated acceptance dir
+(`acceptance/generated/<id>`) — that:
+- registers a handler for EACH Gherkin step keyed by its EXACT IR `text` (the strings
+  from the parsed IR JSON, NOT the raw `.feature`);
+- binds the When-step to a REAL call into the system-under-test (e.g.
+  `calc.subtract(...)`) so the test reds for the RIGHT reason — behavior absent →
+  `AttributeError` — and greens on the obvious implementation the coder writes;
+- reads each example / expected VALUE FROM THE IR example cells, NEVER hardcoded. This
+  is load-bearing: `gherkin-mutator` mutates the example cells, so a handler that
+  hardcoded values would let mutants survive (vacuous acceptance). Reading from the IR
+  is what lets the acceptance suite actually KILL mutants.
+The derived `build/<id>.ir.json` is a gitignored intermediate, regenerated per run (the
+specifier adds `build/` to the target `.gitignore`). The specifier's committed
+deliverable is the `.feature` + the generated entrypoint + the `conftest.py` glue, RED
+for the right reason — never the slice implementation (that is the coder's).
 
 ## The dispatch-packet contract (what a worker is handed, and only this)
 Each `sys_session_send` for a slice carries ONLY:
