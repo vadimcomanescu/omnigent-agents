@@ -39,15 +39,19 @@ restated in any role prompt.
 The coordinator threads the BOOTSTRAP-resolved ABSOLUTE paths into every packet:
 `APS_PARSER` (gherkin-parser), `APS_VENV` (the pinned 3.12 venv), `APS_GENERATOR`
 (`acceptance-entrypoint-generator`), `APS_ADAPTER` (`aps-adapter`), `APS_MUTATOR`
-(gherkin-mutator). Per slice, the specifier authors and the coder drives:
+(gherkin-mutator). `$APS_VENV/bin/*` provides the KIT CLIs ONLY — the venv holds
+`aps-kit` + `mutmut`, NOT pytest; the generated acceptance tests and unit tests run on
+the PROJECT's own `pytest` (the handed gate command), exactly as the kit does. Per
+slice, the specifier authors and the coder drives:
 ```sh
 "$APS_PARSER" features/<id>.feature build/acceptance/<id>.ir.json
 APS_FEATURE_PATH=features/<id>.feature \
   "$APS_GENERATOR" build/acceptance/<id>.ir.json acceptance/generated/<id>
-"$APS_VENV/bin/pytest" acceptance/generated/<id> -q
+pytest acceptance/generated/<id> -q          # the PROJECT's pytest, not $APS_VENV's
 ```
 (`APS_MUTATOR` + `APS_ADAPTER` are the architect's acceptance-mutation gate, run once
-over the whole feature in architect-verify — not per slice.)
+over the whole feature in architect-verify — `gherkin-mutator` drives the project's
+pytest through `$APS_VENV/bin/aps-adapter pytest ...` — not per slice.)
 
 ## The dispatch-packet contract (what a worker is handed, and only this)
 Each `sys_session_send` for a slice carries ONLY:

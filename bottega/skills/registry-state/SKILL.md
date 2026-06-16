@@ -43,6 +43,8 @@ architect-verify all read and advance the state defined here.
      "green_head": "<sha of the last commit where this slice's gates were GREEN>",
      "gate_results": {"at_sha": "<sha>", "test": "pass|fail|unknown",
                       "lint": "...", "typecheck": "...", "coverage": "..."},
+     "integrated_head": "<integration sha AFTER this slice merged>",  // set by integrate-wave
+     "integration_gate": "pass|fail|unknown",  // integrate-wave's re-green result at integrated_head
      "last_handback": {"role": "specifier|coder|refactorer|architect",
                        "head": "<sha>", "changed_files": "<git diff --stat>",
                        "ready_for_next": <bool>},
@@ -69,21 +71,26 @@ states only — on resume they are NOT trusted (see below).
 
 | phase | meaning | advances to | on what fact |
 |-------|---------|-------------|--------------|
-| `pending` | a producer is not yet `integrated`/`done` | `specifying` | all producers integrated → slice enters the ready set, specifier dispatched |
+| `pending` | a producer is not yet satisfied | `specifying` | every producer is `integrated`/`contract_landed`/`done` → slice enters the ready set, specifier dispatched |
 | `specifying` | specifier running | `spec_done` | specifier handback: `.feature` + generated FAILING acceptance entrypoint committed, confirmed RED for the right reason; record `red_head`, `feature_file`, `acceptance_dir` |
 | `spec_done` | the RED acceptance is committed; no implementation yet | `coding` | coder dispatched |
 | `coding` | coder running | `coder_green` | coder handback: acceptance entrypoint + unit tests GREEN, committed; record `green_head` and `gate_results` |
 | `coder_green` | implementation is green; not yet cleaned | `refactoring` | refactorer dispatched |
 | `refactoring` | refactorer running | `ready_to_integrate` | refactorer handback: structure-preserving cleanup, ALL gates green at a new `green_head`, `ready_for_next: yes` |
-| `ready_to_integrate` | gates green + refactorer handback present | `integrated` (or `contract_landed`) | integrate-wave merges the branch into the integration branch and re-greens |
-| `contract_landed` | a spine STUB merged so dependents can build; full impl still owed | `integrated`/`done` | its `impl_followup_of` slice reaches `integrated` |
-| `integrated` | branch merged into the integration branch | `done` | whole DAG signs off |
+| `ready_to_integrate` | gates green + refactorer handback present | `integrated` (or `contract_landed`) | integrate-wave merges the branch AND re-greens the integration gate at the new integration head, recording `integrated_head` + `integration_gate: pass` |
+| `contract_landed` | a spine STUB merged + integration gate green so dependents can build; full impl still owed | `integrated`/`done` | its `impl_followup_of` slice reaches `integrated` |
+| `integrated` | branch merged AND the integration gate recorded green at `integrated_head` | `done` | whole DAG signs off |
 | `done` | terminal | — | — |
 
+A merge alone does NOT make a slice `integrated`: the phase advances only when
+integrate-wave has ALSO re-greened the integration gate at the post-merge integration
+head and recorded `integration_gate: pass`. A merged branch without that recorded
+green evidence sits in the crash window and is handled by resume.
+
 A slice is in the **ready set** for (re)dispatch only when every producer is
-`integrated`/`done` AND its phase is `pending` or a running phase that resume kicked
-back to a not-yet-handed-back state. `integrated`, `contract_landed`, and the
-post-handback phases are EXCLUDED — a slice that already holds a commit is never
+`integrated`/`contract_landed`/`done` AND its phase is `pending` or a running phase
+that resume kicked back to a not-yet-handed-back state. `integrated`, `contract_landed`,
+and the post-handback phases are EXCLUDED — a slice that already holds a commit is never
 re-dispatched from scratch.
 
 ## The spine contract-landed rule (1.2)
@@ -120,9 +127,18 @@ On (re)start, LOAD-OR-INIT before touching branches or dispatching:
 - **Present file → a prior run was interrupted.** Do NOT trust a recorded RUNNING
   phase, and NEVER classify by mere commit existence. For each slice, reconcile its
   PERSISTED phase against git ground truth and the recorded gate result:
-  1. **Merged?** If the slice branch is merged into the integration branch
-     (`git branch --merged <integration-branch>`) → `integrated` (or `done`/
-     `contract_landed` per the spine rule). Terminal for re-dispatch.
+  1. **Merged WITH recorded green evidence?** A merged slice branch
+     (`git branch --merged <integration-branch>`) is terminal (`integrated` / `done` /
+     `contract_landed` per the spine rule) ONLY when the registry ALSO records green
+     integration-gate evidence at its `integrated_head` (`integration_gate: pass`,
+     persisted by integrate-wave when it re-greened after the merge). `git
+     branch --merged` ALONE is never terminal — a crash can land between the merge and
+     the post-merge re-green/persist. A branch that git shows merged but WITHOUT that
+     recorded green evidence (no `integrated_head`/`integration_gate: pass`, or the
+     persisted phase is still `ready_to_integrate`) sits in that crash window → enter
+     RECOVERY: re-run the FULL gates at the current `integration_head`, and mark the
+     slice `integrated` (recording `integrated_head` + `integration_gate: pass`) only
+     once green; if red, route the failure per integrate-wave. Do not treat it as done.
   2. **Running phase?** `specifying`/`coding`/`refactoring` are never trusted on
      resume — the session may be dead. Reclassify to the last COMPLETED phase from
      git + gates: a `coding` slice with no commit past `red_head` falls back to

@@ -17,12 +17,14 @@ is the team's only end state.
   yourself at that HEAD — do not infer green from a worker handback.
 
 ## Open exactly one PR
-Push the integration branch and open the PR from the target root, with the shell and
-absolute paths (the coordinator has shell; no worker does this):
+First PUSH the integration branch to set an upstream (the PR step needs a remote
+branch), then open the PR. `gh` has NO `-C` flag (that's git) — run `gh` from the
+target root via `cd`, or pass the repo with `gh -R <owner>/<repo>`:
 ```sh
 git -C "$TARGET_ROOT" push -u origin bottega/<slug>
-gh -C "$TARGET_ROOT" pr create --base <base-branch> --head bottega/<slug> \
+cd "$TARGET_ROOT" && gh pr create --base <base-branch> --head bottega/<slug> \
    --title "<feature>" --body "<summary>"
+# or, without cd: gh -R <owner>/<repo> pr create --base <base-branch> --head bottega/<slug> ...
 ```
 The body summarizes the feature and the slices, and records the verification
 evidence the architect produced — the green gate suite, the source-mutation result

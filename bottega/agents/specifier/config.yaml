@@ -42,12 +42,14 @@ prompt: |
     Given/When/Then, each named stably, parameterizing fields that vary only by
     example value so one scenario covers the family. Author it under `features/`.
   - The FAILING acceptance entrypoint — GENERATED from that feature with the kit, not
-    hand-written pytest — using the paths the coordinator threads:
+    hand-written pytest. `$APS_VENV/bin/*` provides the KIT CLIs only (parser /
+    generator); run the generated tests with the PROJECT's own `pytest` (the handed
+    gate command), not the venv's — the venv has no pytest:
     ```sh
     "$APS_PARSER" features/<id>.feature build/acceptance/<id>.ir.json
     APS_FEATURE_PATH=features/<id>.feature \
       "$APS_GENERATOR" build/acceptance/<id>.ir.json acceptance/generated/<id>
-    "$APS_VENV/bin/pytest" acceptance/generated/<id> -q     # must FAIL
+    pytest acceptance/generated/<id> -q                     # project's pytest; must FAIL
     ```
     Confirm it fails for the RIGHT reason — the behavior is absent, not a typo, parse
     error, or harness mistake (a wrong-reason failure is a defect you own). Commit the

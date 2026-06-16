@@ -40,8 +40,12 @@ For each accepted `ready_to_integrate` `slice/*` branch, in turn:
   mechanical merge-marker conflict you resolve (step 3); anything else is BOUNCED to
   the owning slice's relevant role-session (CODER for behavior/implementation,
   REFACTORER for cleanup). Never hand-edit source to force a gate green.
-- Mark each merged slice `integrated` (or `contract_landed` for a spine stub, per
-  registry-state) and PERSIST.
+- Only AFTER the post-merge gate is GREEN, mark the slice `integrated` (or
+  `contract_landed` for a spine stub, per registry-state), record its `integrated_head`
+  (the new integration sha) and `integration_gate: pass`, and PERSIST. A slice whose
+  merge landed but whose re-green has not been confirmed-and-persisted is NOT yet
+  `integrated` — that recorded green evidence is exactly what resume requires to treat
+  a merged branch as terminal rather than re-verifying it.
 
 ## 3. Conflicts — you resolve only mechanical merge markers
 - **Mechanical merge-marker conflicts** — two slices appending to the same list,
