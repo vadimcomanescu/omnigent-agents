@@ -21,10 +21,13 @@ is the team's only end state.
   or absent — STOP and commit it before proceeding; an untracked lock means the PR is
   not reproducible.
 - **The verification evidence exists.** The registry `verification` block names the
-  evidence dir and the three artifact paths (`source_mutation`, `dry`,
-  `acceptance_mutation`), `verdict == "sign-off"`, and each file actually exists on
-  disk. If any artifact is missing, REFUSE to open the PR — a sign-off without persisted
-  evidence is not a sign-off.
+  evidence dir and the FOUR artifact paths (`source_mutation`, `dry`,
+  `acceptance_mutation`, `equivalent_mutants`), has `verdict == "sign-off"` and
+  `killable_survivors == 0`, and each file actually exists on disk. The
+  `equivalent_mutants` record must classify every acceptance-mutation survivor (each
+  EQUIVALENT with a justification; no KILLABLE survivor). If any artifact is missing,
+  any survivor is killable, or there is no classification record, REFUSE to open the PR
+  — a sign-off without persisted, fully-classified evidence is not a sign-off.
 
 ## Open exactly one PR
 First PUSH the integration branch to set an upstream (the PR step needs a remote
@@ -39,7 +42,8 @@ cd "$TARGET_ROOT" && gh pr create --base <base-branch> --head bottega/<slug> \
 The body summarizes the feature and the slices, and records the verification
 evidence the architect produced — the green gate suite, the source-mutation result
 (survivors killed), the cross-slice DRY result, and the APS acceptance-mutation
-result (`gherkin-mutator` survived=0/errors=0). Open it ONCE for the whole feature —
+result (`gherkin-mutator`: errors=0, no killable survivors, equivalents justified).
+Open it ONCE for the whole feature —
 never a PR per slice or per wave.
 
 ## Then stop — a human merges

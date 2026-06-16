@@ -32,7 +32,9 @@ architect-verify all read and advance the state defined here.
     "source_mutation": "<path to mutmut output>",
     "dry": "<path to jscpd output>",
     "acceptance_mutation": "<path to gherkin-mutator output>",
-    "verdict": "sign-off|bounce|null"   // pr-assemble refuses unless verdict==sign-off AND all 3 paths exist
+    "equivalent_mutants": "<path to equivalent-mutants.json — every acceptance survivor classified>",
+    "killable_survivors": <int>,        // MUST be 0 to sign off (equivalents are documented, not killable)
+    "verdict": "sign-off|bounce|null"   // pr-assemble refuses unless verdict==sign-off AND all 4 paths exist
   },
   "slices": [
     {"id": "...", "behavior": "...",

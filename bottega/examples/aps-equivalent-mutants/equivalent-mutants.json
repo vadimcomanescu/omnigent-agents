@@ -1,0 +1,29 @@
+{
+  "feature": "features/validation.feature",
+  "summary": "total=4 killed=1 survived=3 errors=0",
+  "killable_survivors": 0,
+  "survivors": [
+    {
+      "mutation": "$.scenarios[0].examples[0].a: x -> X",
+      "class": "equivalent",
+      "justification": "rejects-non-numeric scenario; the assertion is type-only (TypeError). A non-numeric operand mutated to another non-numeric value still raises TypeError, so the exact value is not outcome-determining."
+    },
+    {
+      "mutation": "$.scenarios[0].examples[0].b: y -> Y",
+      "class": "equivalent",
+      "justification": "same scenario; a is validated first and b is also non-numeric, so the outcome is TypeError regardless of b's value."
+    },
+    {
+      "mutation": "$.scenarios[1].examples[0].a: 10 -> 7",
+      "class": "equivalent",
+      "justification": "zero-divisor scenario (b=0); the dividend is irrelevant to ZeroDivisionError, so mutating it cannot change the outcome."
+    }
+  ],
+  "killed": [
+    {
+      "mutation": "$.scenarios[1].examples[0].b: 0 -> -1",
+      "note": "the divisor IS outcome-determining: away from 0 there is no ZeroDivisionError, the test fails, the mutant is killed. Proves the gate still catches load-bearing cells (a vacuous/hardcoded handler would let this survive => killable => BOUNCE)."
+    }
+  ],
+  "verdict": "sign-off"
+}

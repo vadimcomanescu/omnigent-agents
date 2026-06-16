@@ -1,6 +1,6 @@
 ---
 name: architect-verify
-description: Load ONCE at the end — the final whole-feature join by a fresh architect at the integration HEAD. Run gates, source mutation, cross-slice DRY, and APS acceptance mutation (gherkin-mutator, survived=0/errors=0) over the assembled feature, then SIGN-OFF or BOUNCE, attributing each failure to its owning slice. Holds the bounce-loop cap.
+description: Load ONCE at the end — the final whole-feature join by a fresh architect at the integration HEAD. Run gates, source mutation, cross-slice DRY, and APS acceptance mutation (gherkin-mutator — errors=0 with every survivor classified KILLABLE→bounce or EQUIVALENT→justified) over the assembled feature, then SIGN-OFF or BOUNCE, attributing each failure to its owning slice. Holds the bounce-loop cap.
 ---
 
 # architect-verify — the final whole-feature join
@@ -47,7 +47,7 @@ each path in the registry `verification` block.
    a COPY of each feature (gherkin-mutator writes a manifest stamp INTO `--feature`, so
    running against the tracked file would dirty committed features and make reruns skip):
    ```sh
-   set -o pipefail   # a gherkin-mutator non-zero exit must propagate, not be masked by tee
+   set -o pipefail   # a gherkin-mutator CRASH must propagate, not be masked by tee
    : > "$EV/acceptance-mutation.txt"
    for feat in features/*.feature; do
      id="$(basename "$feat" .feature)"
@@ -55,22 +55,41 @@ each path in the registry `verification` block.
      cp "$feat" "build/acc-mut/$id/feature"          # mutate the COPY, never the tracked feature
      "$APS_MUTATOR" --feature "build/acc-mut/$id/feature" --work-dir "build/acc-mut/$id/wd" \
        --generated-dir "acceptance/generated/$id" --level hard \
-       --runner-worker "$APS_ADAPTER pytest acceptance/generated/$id -q" \
+       --runner-worker "$APS_ADAPTER $APS_VENV/bin/pytest acceptance/generated/$id -q" \
        2>&1 | tee -a "$EV/acceptance-mutation.txt"
-     [ "${PIPESTATUS[0]}" -eq 0 ] || { echo "BOUNCE: gherkin-mutator failed on $id"; break; }
    done
    ```
-   PASS is exit 0 with a `total=N killed=N survived=0 errors=0` summary per feature; any
-   survived or errored mutant (exit 1) is a BOUNCE. A fresh `--work-dir` + an un-stamped
-   COPY guarantees an authoritative run (never a differentially-skipped `total=0`). This
-   is the mechanism the architect uses — NOT a "no APS / no Gherkin" exclusion; APS
-   acceptance mutation and source mutation are both mandatory and complementary. After
-   the loop, confirm `git -C "$TARGET_ROOT" status --porcelain features/` is EMPTY — the
-   tracked features must be untouched.
-5. **Verdict** — SIGN-OFF only when all three evidence files (`source-mutation.txt`,
-   `dry.txt`, `acceptance-mutation.txt`) exist and show green (gates pass, source
-   survivors killed, DRY clean, acceptance `survived=0 errors=0`); record the three
-   paths + `verdict: sign-off` in the registry `verification` block. Otherwise BOUNCE.
+   A fresh `--work-dir` + an un-stamped COPY guarantees an authoritative run (never a
+   differentially-skipped `total=0`). The `--runner-worker` invokes
+   `$APS_VENV/bin/pytest` EXPLICITLY — bare `pytest` resolves to the SYSTEM interpreter,
+   which lacks `aps_kit` and errors EVERY mutant (`ModuleNotFoundError: aps_kit`); the
+   explicit venv pytest makes the command self-contained, no `PATH` surgery. After the
+   loop, confirm `git -C "$TARGET_ROOT" status --porcelain features/` is EMPTY — tracked
+   features must be untouched. Note `gherkin-mutator` exits 1 whenever ANY mutant
+   survives OR errors, so a non-zero exit is NOT itself a verdict — read the summary.
+
+   **Classify survivors — NOT literal `survived=0`.** gherkin-mutator mutates example
+   CELLS, and some mutations cannot change a scenario's outcome — equivalent mutants,
+   inherently unkillable EVEN WHEN the glue correctly reads operand values from the IR
+   (e.g. flipping one non-numeric operand to another in a type-only "rejects non-numeric"
+   scenario; the dividend in a divide-by-zero scenario; a short-circuited second
+   operand). A literal `survived=0` bar is therefore UNSATISFIABLE for any feature with
+   validation or error handling. For EACH surviving mutant the architect decides:
+   - **KILLABLE** — the mutated cell IS outcome-determining and the suite failed to
+     catch it ⇒ a weak/vacuous example or a hardcoded handler ⇒ BOUNCE the owning slice.
+   - **EQUIVALENT** — the mutated cell cannot change the scenario outcome ⇒ acceptable,
+     WITH a one-line written justification.
+   `errors > 0` is ALWAYS a BOUNCE (harness/tool failure — e.g. a runner that can't
+   import `aps_kit`). Record every survivor's `{mutation, class, justification}` into
+   `$EV/equivalent-mutants.json` AND the registry `verification` block.
+   (`examples/aps-equivalent-mutants` is the runnable regression for this gate;
+   `examples/aps-step-isolation` covers the all-killed case.)
+5. **Verdict** — SIGN-OFF requires, over the whole feature set: `errors=0`, **ZERO
+   killable survivors**, every equivalent survivor justified, source-mutation survivors
+   killed, DRY clean — AND all four evidence files exist (`source-mutation.txt`,
+   `dry.txt`, `acceptance-mutation.txt`, `equivalent-mutants.json`). Record the paths +
+   `verdict: sign-off` in the registry `verification` block. Any killable survivor, any
+   `errors>0`, or a missing evidence / justification record ⇒ BOUNCE.
 
 ## Bounded targeted sub-sessions are allowed
 The architect may run a small, BOUNDED number of targeted passes — one per survivor

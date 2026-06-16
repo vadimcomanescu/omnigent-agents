@@ -27,9 +27,10 @@ path has been **run**:
 - **Exercised:** a single Python/pytest slice, K=1 (one ready slice per wave), the
   happy path — PLAN → BOOTSTRAP → one slice through specifier → coder → refactorer →
   integrate → architect-verify (gates + `mutmut` + DRY + `gherkin-mutator`) → one PR.
-  The APS step-isolation pattern (two features sharing a step text) and the
-  acceptance-mutation kill are proven by `examples/aps-step-isolation` (a runnable
-  regression).
+  The APS step-isolation pattern (two features sharing a step text), the
+  acceptance-mutation kill, and the equivalent-mutant **classification** gate (killable
+  → bounce, equivalent → justified) are proven by `examples/aps-step-isolation` and
+  `examples/aps-equivalent-mutants` (runnable regressions).
 - **Designed but NOT yet exercised:** K>1 parallel waves and `fanout`; the spine /
   `contract_landed` follow-up flow; multi-slice integration, merge-conflict routing,
   and cross-slice DRY bounces; resume/reclassify after a crash; the architect
@@ -321,6 +322,12 @@ one **deliberately failing** test — the pipeline's red→green starting point:
   **regression**: two features sharing a Gherkin step text must collect + run without
   the duplicate-handler collision, and acceptance mutation must kill every mutant.
   Proves the per-feature-Registry glue pattern (`./run.sh`).
+- [`examples/aps-equivalent-mutants`](./examples/aps-equivalent-mutants) — a runnable
+  **regression** for the equivalent-mutant gate: a validation feature whose type-only
+  and divide-by-zero scenarios yield survivors that **cannot** change the outcome
+  (`total=4 killed=1 survived=3`). Shows the architect classifying each survivor
+  KILLABLE → bounce vs EQUIVALENT → justified (`equivalent-mutants.json`), and that the
+  gate still kills the one load-bearing cell.
 
 Each sample already gitignores the `.bottega/` runtime scratch (`.bottega/*` +
 `!.bottega/aps.lock`), so the registry, worktrees, APS binaries, and pinned venv
