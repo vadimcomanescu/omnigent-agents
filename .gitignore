@@ -1,0 +1,4 @@
+# bottega runtime scratch (per-target): the APS toolchain binaries are downloaded
+# and SHA-256-verified at run time, never committed. The APS lockfile
+# (.bottega/aps.lock) IS committed; only the binaries are ignored.
+.bottega/bin/

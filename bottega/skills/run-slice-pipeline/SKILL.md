@@ -37,6 +37,9 @@ Each worker session for a slice receives exactly:
 - the ABSOLUTE worktree path (cd there first),
 - the slice branch `slice/<id>` and the base commit SHA it starts from,
 - the gate commands (tests / lint / typecheck, coverage if configured),
+- the resolved APS tool paths from the BOOTSTRAP step's `.bottega/aps.lock` —
+  `APS_PARSER=<abs>` / `APS_MUTATOR=<abs>` (the same absolute paths for every
+  slice),
 - the done definition (acceptance + unit tests green; gates green).
 
 A worker is NEVER handed a sibling slice's session or diff. If it needs merged

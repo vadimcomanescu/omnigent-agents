@@ -40,10 +40,13 @@ The registry is DURABLE: it lives in a scratch file in the TARGET repo at
 `.bottega/<feature-slug>.json`, not only in your context. On every (re)start, load
 it or initialize it BEFORE touching branches or dispatching:
 - If the scratch file is ABSENT, this is a fresh run. Initialize the registry with
-  the planned DAG + spine tags, and ensure the target repo IGNORES the
-  scratch dir — add a `.bottega/` line to the target repo's `.gitignore` if it
-  isn't already there. The `.bottega/` dir is runtime state (the registry plus the
-  `.bottega/wt/<id>` worktrees), never part of the PR.
+  the planned DAG + spine tags, and ensure the target repo IGNORES the runtime
+  scratch while keeping the committed APS lock TRACKED — add `.bottega/*` and
+  `!.bottega/aps.lock` to the target repo's `.gitignore` if not already there (NOT a
+  blanket `.bottega/`, which can't re-include `.bottega/aps.lock`). The `.bottega/`
+  dir is runtime state (the registry, the `.bottega/wt/<id>` worktrees, and the
+  `.bottega/bin/` APS binaries), never part of the PR — except `.bottega/aps.lock`,
+  which the BOOTSTRAP step commits.
 - If the scratch file is PRESENT, a prior run was interrupted. Do NOT trust the
   recorded statuses — RECLASSIFY every slice from git ground truth using the slice
   state model above. Read:

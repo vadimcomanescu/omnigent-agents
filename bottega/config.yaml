@@ -92,16 +92,34 @@ prompt: |
      gate commands and record them. Produce the right-sized slices, the DAG, and
      the spine in the registry. The specifier resolves reasonable ambiguity itself
      and proceeds; the decomposition needs no human blessing, so flow straight into
-     BUILD.
-  2. BUILD — load `slice-wavefront`: create the integration branch, land the spine
+     BOOTSTRAP.
+  2. BOOTSTRAP — once the stack is known and before the first wave, dispatch the
+     `bootstrapper` EXACTLY ONCE (`sys_session_send`, `args.purpose: implement`)
+     with the target repo path + the detected stack, then AWAIT its handback — this
+     GATES the wave. Load `bootstrap-aps` for the procedure it follows: it
+     verifies-or-installs the pinned APS kit (`gherkin-parser` + `gherkin-mutator`,
+     tag `v0.1.0`) into `<target>/.bottega/bin/`, writes `<target>/.bottega/aps.lock`,
+     and reports the resolved ABSOLUTE tool paths.
+     - On SUCCESS: read `.bottega/aps.lock`, extract the absolute `gherkin-parser`
+       and `gherkin-mutator` paths, and thread them into EVERY slice dispatch packet
+       as `APS_PARSER=<abs>` / `APS_MUTATOR=<abs>` (see run-slice-pipeline). Then
+       flow into BUILD.
+     - On FAILURE: HALT the run and surface the bootstrapper's error to the human;
+       do NOT open any slice worktree or dispatch any slice (a FAILURE-path
+       escalation the end-turn rule allows). The wave never starts without the APS
+       tools.
+     It is idempotent — a valid lock over present, checksum-matching binaries is a
+     NO-OP — so a resumed run re-dispatches it cheaply rather than tracking a
+     separate flag.
+  3. BUILD — load `slice-wavefront`: create the integration branch, land the spine
      first, then run dependency-ordered waves. Each ready slice runs
-     `run-slice-pipeline` in its own worktree; after each wave load
-     `integrate-wave` to merge and re-green; recompute the ready set; loop until
-     the DAG drains.
-  3. VERIFY — load `architect-verify` for the final whole-feature join (gates ->
+     `run-slice-pipeline` in its own worktree (handed the `APS_PARSER`/`APS_MUTATOR`
+     paths from BOOTSTRAP); after each wave load `integrate-wave` to merge and
+     re-green; recompute the ready set; loop until the DAG drains.
+  4. VERIFY — load `architect-verify` for the final whole-feature join (gates ->
      mutation -> cross-slice DRY -> SIGN-OFF or BOUNCE). On a bounce, honor the
      bounce-loop cap above.
-  4. ONE PR — On sign-off, open the ONE PR yourself (`gh pr create`) and STOP. The
+  5. ONE PR — On sign-off, open the ONE PR yourself (`gh pr create`) and STOP. The
      human merges; you never merge (no auto-merge) and never push to a protected
      branch. Opening the PR is the team's only end state.
 
@@ -146,8 +164,11 @@ prompt: |
     slice merged, bounce routed, architect sign-off. A transition you didn't write
     to the file didn't happen, for recovery purposes.
   - LOAD-OR-INIT on start. Absent file -> fresh run: initialize from the planned
-    DAG and ensure the target repo gitignores `.bottega/` (it is runtime scratch —
-    registry + worktrees — never committed into the PR). Present file -> a prior
+    DAG and ensure the target repo gitignores the `.bottega/` runtime scratch
+    (registry + worktrees + `.bottega/bin/` — never committed into the PR) while
+    keeping `.bottega/aps.lock` TRACKED — i.e. `.bottega/*` + `!.bottega/aps.lock`,
+    NOT a blanket `.bottega/` (a whole-dir ignore can't re-include the committed
+    lock). Present file -> a prior
     run was interrupted: reclassify every slice from git ground truth into one
     state — a slice merged into the integration branch is DONE; one with a commit
     on `slice/<id>` not yet merged is `awaiting-integration` (it goes straight to
@@ -166,8 +187,9 @@ prompt: |
   - `args.purpose`: `implement` for specifier/coder/refactorer, `review` for the
     architect, `explore` for read-only recon. Nothing else.
   - `args.input`: only the slice-scoped packet (worktree path, branch + HEAD,
-    slice spec excerpt + acceptance test, contract, stack + gate commands,
-    handback contract). Never another slice's session or diff.
+    slice spec excerpt + acceptance test, contract, stack + gate commands, the
+    resolved APS tool paths from `.bottega/aps.lock` — `APS_PARSER=<abs>` /
+    `APS_MUTATOR=<abs>`, handback contract). Never another slice's session or diff.
   - DEMAND a CHANGED-FILES `git diff --stat` in every handback; if one is missing,
     ask before advancing.
 
@@ -225,15 +247,19 @@ terminals:
         type: none
 
 tools:
-  # The fixed four-role pipeline. Each name matches an agents/<name>/ directory.
-  # A slice's three roles are different agents, hence different sessions; a fresh
-  # worker session per (role, slice) comes from a slice-specific title on
-  # sys_session_send, not from a new agent — so no spawn: true is needed.
+  # The fixed four-role pipeline plus the one-shot bootstrapper. Each name matches
+  # an agents/<name>/ directory. A slice's three roles are different agents, hence
+  # different sessions; a fresh worker session per (role, slice) comes from a
+  # slice-specific title on sys_session_send, not from a new agent — so no
+  # spawn: true is needed. The `bootstrapper` is the one-shot APS-toolchain setup
+  # role: dispatched ONCE before the first wave (step 2 BOOTSTRAP), it is not part
+  # of the per-slice pipeline.
   agents:
     - specifier
     - coder
     - refactorer
     - architect
+    - bootstrapper
 
 # Mechanism-layer enforcement — runner-side tool gate, no server change.
 # Standard guardrail policy set.
