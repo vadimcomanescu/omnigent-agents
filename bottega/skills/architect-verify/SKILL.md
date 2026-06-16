@@ -24,14 +24,19 @@ each path in the registry `verification` block.
 ## Sequence (each step gates the next; a failure that warrants it is a BOUNCE)
 1. **Full gates** — tests / lint / typecheck (and coverage if configured), green end
    to end over the whole feature.
-2. **Source mutation** — REQUIRED. `mutmut` from the pinned APS venv, output captured:
+2. **Source mutation** — REQUIRED. `mutmut` from the pinned APS venv, output captured.
+   `set -o pipefail` so a `mutmut` crash propagates instead of being masked by `tee`'s
+   exit 0:
    ```sh
-   "$APS_VENV/bin/mutmut" run 2>&1 | tee "$EV/source-mutation.txt"
+   set -o pipefail
+   "$APS_VENV/bin/mutmut" run 2>&1 | tee "$EV/source-mutation.txt"   # checks ${PIPESTATUS[0]}
    ```
    Cover the uncovered and KILL SURVIVORS. A surviving source mutant is a BOUNCE.
-3. **Cross-slice DRY** — REQUIRED. A duplication detector (jscpd), output captured:
+3. **Cross-slice DRY** — REQUIRED. A duplication detector (jscpd), output captured (same
+   `pipefail` so a `jscpd` crash is not masked by `tee`):
    ```sh
-   jscpd --pattern "**/*.py" 2>&1 | tee "$EV/dry.txt"
+   set -o pipefail
+   jscpd --pattern "**/*.py" 2>&1 | tee "$EV/dry.txt"               # checks ${PIPESTATUS[0]}
    ```
    SIGNIFICANT duplication — especially helpers several slices reinvented — is a BOUNCE.
 4. **Acceptance mutation (APS)** — REQUIRED, complementary to source mutation: source
@@ -42,6 +47,7 @@ each path in the registry `verification` block.
    a COPY of each feature (gherkin-mutator writes a manifest stamp INTO `--feature`, so
    running against the tracked file would dirty committed features and make reruns skip):
    ```sh
+   set -o pipefail   # a gherkin-mutator non-zero exit must propagate, not be masked by tee
    : > "$EV/acceptance-mutation.txt"
    for feat in features/*.feature; do
      id="$(basename "$feat" .feature)"
@@ -51,6 +57,7 @@ each path in the registry `verification` block.
        --generated-dir "acceptance/generated/$id" --level hard \
        --runner-worker "$APS_ADAPTER pytest acceptance/generated/$id -q" \
        2>&1 | tee -a "$EV/acceptance-mutation.txt"
+     [ "${PIPESTATUS[0]}" -eq 0 ] || { echo "BOUNCE: gherkin-mutator failed on $id"; break; }
    done
    ```
    PASS is exit 0 with a `total=N killed=N survived=0 errors=0` summary per feature; any
