@@ -6,13 +6,25 @@ description: Load per slice — the COORDINATOR's 3-role dispatch sequence (spec
 # run-slice-pipeline — one slice, one worktree, the whole way to green
 
 The slice is the unit of delegation. This is the role sequence for ONE slice, in ONE
-worktree. The COORDINATOR runs it as THREE SEPARATE role-sessions in sequence,
-staying in control between each: dispatch the specifier, wait for the handback,
-dispatch the coder, wait, dispatch the refactorer. The three roles are different
-agents on different harnesses — so they are DIFFERENT sessions; one session NEVER runs
-the whole specifier → coder → refactorer pipeline.
+worktree. The COORDINATOR runs it as up to THREE SEPARATE role-sessions in sequence,
+staying in control between each. The three roles are different agents on different
+harnesses — so they are DIFFERENT sessions; one session NEVER runs the whole
+specifier → coder → refactorer pipeline.
 
-## The sequence (the coordinator dispatches each, in order; phases per registry-state)
+## Enter at the role matching the slice's SETTLED phase (resume-safe)
+This sequence is PHASE-AWARE: it enters at the role for the slice's current settled
+phase and runs FORWARD from there — it NEVER re-runs an already-completed role. A
+completed role left a committed artifact (the spec, the green implementation); re-running
+it over that artifact is the resume bug this avoids.
+- `pending` → enter at step 1 (specifier), then coder, then refactorer.
+- `spec_done` → enter at step 2 (coder), then refactorer. The specifier is DONE; do not
+  re-run it over the committed spec/entrypoint.
+- `coder_green` → enter at step 3 (refactorer) only. The specifier and coder are DONE.
+So slice-wavefront's "dispatch coder / dispatch refactorer" means "enter this pipeline
+at that role"; each verified handback then SETTLES the slice to the next phase and the
+next role runs (per registry-state).
+
+## The sequence (enter at the phase-appropriate step; never re-run a completed role)
 1. **specifier** (session A) authors THIS slice's Gherkin `.feature`, GENERATES its
    FAILING acceptance entrypoint with the APS kit (parser → generator), AND authors the
    step-handler glue (see below), confirming it fails for the right reason. Hands back →
@@ -68,13 +80,16 @@ handler")` on a repeated step text, while bare pytest auto-loads EVERY generated
 the whole gate at collection. So AFTER parser → generator, the specifier authors a
 slice-scoped `conftest.py` in the generated acceptance dir (`acceptance/generated/<id>`)
 that:
-- builds a PER-FEATURE `Registry()` — NEVER `default_registry` — and routes the
-  generated test to it with an autouse fixture
-  (`monkeypatch.setattr(aps_kit.runtime, "default_registry", registry)`). The generated
-  test calls `run_execution(ir, s, e)` with no registry arg, so this is what isolates
-  features that share step text. NO kit change is needed: `run_execution` already
-  accepts a per-feature `registry`. (`examples/aps-step-isolation` is the runnable
-  regression for this.)
+- builds a PER-FEATURE `Registry()` — NEVER `default_registry`. Registering into a
+  fresh per-feature registry is what avoids the import-time duplicate-step collision
+  (two conftests no longer register the same text into one global). But the generated
+  test calls `run_execution(ir, s, e)` with NO registry arg, and `run_execution`
+  resolves `reg = registry or default_registry` at CALL time — so to make it use this
+  feature's registry, a per-test autouse fixture monkeypatches the call-time global
+  (`monkeypatch.setattr(aps_kit.runtime, "default_registry", registry)`) and pytest
+  undoes it after each test. This is a glue-ONLY mechanism (no kit/generator change):
+  passing `registry=` would require changing the generator's emitted call for zero gain.
+  (`examples/aps-step-isolation` is the runnable regression.)
 - registers a handler for EACH Gherkin step keyed by its EXACT IR `text` — placeholders
   and all (`I subtract <b> from <a>`), from the parsed IR JSON, NOT the raw `.feature`;
 - binds the When-step to a REAL call into the system-under-test (e.g.

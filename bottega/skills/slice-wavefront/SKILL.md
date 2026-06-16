@@ -64,16 +64,19 @@ Repeat until the DAG drains. Each pass:
 - **Integrate-or-dispatch off the ready set.** Use registry-state's ONE ready-set
   definition — do not restate it. For each slice in it, take its next action:
   `ready_to_integrate` → hand to **integrate-wave** (merge, never re-dispatch);
-  `pending` → dispatch specifier; `spec_done` → dispatch coder; `coder_green` →
-  dispatch refactorer. Because every non-terminal SETTLED phase is dispatchable from
-  itself, a slice stranded at `spec_done`/`coder_green` by a crash is picked up here —
-  the run cannot stall after a handback.
+  otherwise ENTER **run-slice-pipeline at the role matching the slice's settled phase** —
+  `pending` → specifier, `spec_done` → coder, `coder_green` → refactorer — running
+  FORWARD from there and NEVER re-running a completed role. Because each settled phase
+  enters at its OWN next role, a slice stranded at `spec_done`/`coder_green` by a crash
+  resumes at the coder/refactorer (not back at the specifier) — the run cannot stall
+  after a handback, and no committed spec/implementation is re-done.
 - **Fan out the dispatches.** Call **fanout** for the slices being dispatched, up to K:
-  it spins one worktree per slice off the current integration HEAD and runs each
-  slice's **run-slice-pipeline** — the coordinator's 3-role dispatch SEQUENCE
-  (specifier → coder → refactorer, SEPARATE sessions, a handback between each). The
+  it spins one worktree per slice off the current integration HEAD and ENTERS each
+  slice's **run-slice-pipeline** at that slice's phase-appropriate role (the pipeline is
+  phase-aware; the roles remain SEPARATE sessions with a handback between each). The
   K-parallelism is ACROSS slices, never multiple roles in one session. fanout sets each
-  slice's running marker + per-role `conversation_id`s and PERSISTS before the turn ends.
+  slice's running marker + the dispatched role's `conversation_id` and PERSISTS before
+  the turn ends.
 - **Collect.** Each verified handback SETTLES the slice to the next phase (per
   registry-state); a slice that finishes its pipeline settles at `ready_to_integrate`.
 - **Integrate the wave.** **integrate-wave** dup-scans, merges each

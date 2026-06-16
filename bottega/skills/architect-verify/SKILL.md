@@ -15,48 +15,55 @@ their DISTILLED outputs: the source-mutation tool → a survivor list; the dupli
 detector → a report; `gherkin-mutator` → a survived/killed summary; the gate suite →
 pass/fail. Apply judgment to those results, not to a re-read of every file.
 
-Scope: this gate is Python/pytest (the only stack APS is wired for). WRITE every
-tool's raw output to a file under the run's evidence dir
-`$TARGET_ROOT/.bottega/verify/<integration_head>/` and record each path in the
-registry `verification` block — the verdict and pr-assemble both depend on it.
+Scope: this gate is Python/pytest (the only stack APS is wired for). Each tool's
+command below ACTUALLY redirects its output into the run's evidence dir
+`EV="$TARGET_ROOT/.bottega/verify/<integration_head>"` (`mkdir -p "$EV"` first); the
+set of files WRITTEN here is exactly the set the verdict and pr-assemble CHECK. Record
+each path in the registry `verification` block.
 
 ## Sequence (each step gates the next; a failure that warrants it is a BOUNCE)
 1. **Full gates** — tests / lint / typecheck (and coverage if configured), green end
    to end over the whole feature.
-2. **Source mutation** — REQUIRED. `mutmut` from the pinned APS venv
-   (`"$APS_VENV/bin/mutmut"`). Cover the uncovered and KILL SURVIVORS. A surviving
-   source mutant is a BOUNCE. Tee the result to `…/source-mutation.txt`.
-3. **Cross-slice DRY** — REQUIRED. A duplication detector (jscpd) across the whole
-   feature. SIGNIFICANT duplication — especially helpers several slices reinvented — is
-   a BOUNCE. Tee the report to `…/dry.txt`.
+2. **Source mutation** — REQUIRED. `mutmut` from the pinned APS venv, output captured:
+   ```sh
+   "$APS_VENV/bin/mutmut" run 2>&1 | tee "$EV/source-mutation.txt"
+   ```
+   Cover the uncovered and KILL SURVIVORS. A surviving source mutant is a BOUNCE.
+3. **Cross-slice DRY** — REQUIRED. A duplication detector (jscpd), output captured:
+   ```sh
+   jscpd --pattern "**/*.py" 2>&1 | tee "$EV/dry.txt"
+   ```
+   SIGNIFICANT duplication — especially helpers several slices reinvented — is a BOUNCE.
 4. **Acceptance mutation (APS)** — REQUIRED, complementary to source mutation: source
    mutation mutates the CODE, APS mutation mutates the GHERKIN acceptance to prove the
    acceptance suite actually constrains behavior. Run `gherkin-mutator` (the threaded
    `APS_MUTATOR`) over EVERY `features/*.feature` — not one hardcoded feature — with the
-   venv's `aps-adapter` as the runner, teeing to `…/acceptance-mutation.txt`:
+   venv's `aps-adapter` as the runner, capturing all output to the evidence file. Mutate
+   a COPY of each feature (gherkin-mutator writes a manifest stamp INTO `--feature`, so
+   running against the tracked file would dirty committed features and make reruns skip):
    ```sh
+   : > "$EV/acceptance-mutation.txt"
    for feat in features/*.feature; do
      id="$(basename "$feat" .feature)"
-     rm -rf "build/acc-mut/$id"            # fresh work-dir per feature (see below)
-     "$APS_MUTATOR" --feature "$feat" --work-dir "build/acc-mut/$id" \
+     rm -rf "build/acc-mut/$id"; mkdir -p "build/acc-mut/$id"
+     cp "$feat" "build/acc-mut/$id/feature"          # mutate the COPY, never the tracked feature
+     "$APS_MUTATOR" --feature "build/acc-mut/$id/feature" --work-dir "build/acc-mut/$id/wd" \
        --generated-dir "acceptance/generated/$id" --level hard \
-       --runner-worker "$APS_ADAPTER pytest acceptance/generated/$id -q"
+       --runner-worker "$APS_ADAPTER pytest acceptance/generated/$id -q" \
+       2>&1 | tee -a "$EV/acceptance-mutation.txt"
    done
    ```
-   PASS is exit 0 with a `total=N killed=N survived=0 errors=0` summary; any survived or
-   errored mutant (exit 1) is a BOUNCE. This is the mechanism the architect uses for
-   acceptance mutation — NOT a "no APS / no Gherkin" exclusion; APS acceptance mutation
-   and source mutation are both mandatory and complementary.
-   - **Force an authoritative run.** `gherkin-mutator` skips differentially: it caches
-     per `--work-dir` AND writes a manifest stamp INTO the `--feature` file, so a re-run
-     reports `skipped_scenarios`/`skipped_mutations` with `total=0` and proves nothing.
-     Use a FRESH `--work-dir` per feature, and run against a feature WITHOUT a stale
-     stamp (mutate a copy, or strip the prior stamp). The authoritative result is the
-     run reporting `total=N killed=N` (`survived=0 errors=0`), never a skipped re-run.
-5. **Verdict** — SIGN-OFF only when all three evidence files exist and show green
-   (gates pass, source survivors killed, DRY clean, acceptance `survived=0 errors=0`);
-   record the file paths + `verdict` in the registry `verification` block. Otherwise
-   BOUNCE.
+   PASS is exit 0 with a `total=N killed=N survived=0 errors=0` summary per feature; any
+   survived or errored mutant (exit 1) is a BOUNCE. A fresh `--work-dir` + an un-stamped
+   COPY guarantees an authoritative run (never a differentially-skipped `total=0`). This
+   is the mechanism the architect uses — NOT a "no APS / no Gherkin" exclusion; APS
+   acceptance mutation and source mutation are both mandatory and complementary. After
+   the loop, confirm `git -C "$TARGET_ROOT" status --porcelain features/` is EMPTY — the
+   tracked features must be untouched.
+5. **Verdict** — SIGN-OFF only when all three evidence files (`source-mutation.txt`,
+   `dry.txt`, `acceptance-mutation.txt`) exist and show green (gates pass, source
+   survivors killed, DRY clean, acceptance `survived=0 errors=0`); record the three
+   paths + `verdict: sign-off` in the registry `verification` block. Otherwise BOUNCE.
 
 ## Bounded targeted sub-sessions are allowed
 The architect may run a small, BOUNDED number of targeted passes — one per survivor

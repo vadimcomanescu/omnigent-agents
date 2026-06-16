@@ -16,8 +16,13 @@ It also proves the handlers must **read example values from the IR row** (`ex[..
 never hardcode them: `gherkin-mutator` mutates the example cells, and IR-reading
 handlers kill every mutant.
 
-No kit change is needed: `aps_kit.runtime.run_execution(ir, s, e, registry=None)`
-already accepts a per-feature `Registry`; the glue supplies one.
+Glue-only, no kit change. The fix is NOT "pass `registry=` into `run_execution`" — the
+generator emits `run_execution(_IR_PATH, s, e)` with no registry arg. Instead: a
+per-feature `Registry()` avoids the import-time duplicate-step collision, and because
+`run_execution` resolves `reg = registry or default_registry` at CALL time, a per-test
+autouse fixture monkeypatches `aps_kit.runtime.default_registry` to this feature's
+registry (undone after each test). Changing the generator to thread `registry=` would
+be a kit change for zero gain.
 
 ## Run
 
