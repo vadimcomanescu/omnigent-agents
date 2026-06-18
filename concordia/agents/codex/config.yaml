@@ -5,6 +5,16 @@ executor:
   type: omnigent
   config:
     harness: codex
+  # Pin the codex CLI subscription provider (kind: subscription, ~/.codex/auth.json,
+  # no API key) so routing travels with the bundle. A provider-type auth resolves
+  # AHEAD of the openai-family default; without it the codex harness falls through
+  # to the host's default openai provider (kind: key), which demands the unset
+  # $OPENAI_API_KEY and fails boot with "Unresolved environment variable
+  # '$OPENAI_API_KEY'". `name: codex` references the codex provider in
+  # ~/.omnigent/config.yaml. (omnigent/spec/types.py ProviderAuth.)
+  auth:
+    type: provider
+    name: codex
 llm:
   model: gpt-5.5
   reasoning_effort: xhigh
