@@ -15,11 +15,9 @@ llm:
   # (omnigent/reasoning_effort.py: CLAUDE_EFFORTS = ANTHROPIC_EFFORTS =
   # {low, medium, high, xhigh, max}). Same ceiling as the coordinator.
   reasoning_effort: max
-os_env:
-  type: caller_process
-  cwd: .
-  sandbox:
-    type: none
+# No os_env block: the judge is compare-only and its prompt forbids running or
+# fetching anything, so it needs no shell/file access. Omitting os_env means the
+# claude-sdk harness boots with no native OS tools — least privilege by design.
 prompt: |
   You are the FUSION JUDGE on a multi-model panel. You are handed the user's
   task and the panel's blinded drafts, labelled A, B, and C (there may be
