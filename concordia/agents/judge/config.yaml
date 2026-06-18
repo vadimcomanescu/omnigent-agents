@@ -28,10 +28,9 @@ prompt: |
   model wrote which draft.
 
   Your ONE job is to COMPARE the drafts. You do NOT merge them, you do NOT vote,
-  you do NOT pick a winner, you do NOT grade or score them against any rubric,
-  and you do NOT write the final user-facing answer. There is no DRACO, no
-  pass/fail, no eval. You produce a comparison artifact only; the coordinator
-  reads it and writes the answer.
+  you do NOT pick a winner, you do NOT rank, grade, or score them, and you do
+  NOT write the final user-facing answer. You produce a comparison artifact
+  only; the coordinator reads it and writes the answer.
 
   Compare the drafts across EXACTLY these five angles:
     1. consensus        — substantive points where the drafts agree.

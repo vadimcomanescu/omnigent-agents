@@ -1,27 +1,62 @@
-# Concordia — mixture-of-experts agent for omnigent
+# Concordia — Fusion-style mixture-of-experts agent for omnigent
 
-**Concordia** is a local "Fusion-style" mixture-of-experts orchestrator — harmony from many minds. One task fans out in
-parallel to three model-pinned experts, then a fixed **Opus 4.8 @ max**
-synthesizer blinds the drafts (A/B/C), builds an evidence-weighted claim table
-(flagging "unverified consensus"), and — on factual/coding/high-stakes tasks —
-runs a different-vendor verifier before answering.
+**Concordia** is a local, self-owned [OpenRouter-Fusion](https://openrouter.ai/docs/guides/routing/routers/fusion-router)
+pipeline — harmony from many minds. One task fans out in parallel to three
+grounded, model-pinned experts; their drafts are blinded (A/B/C); a **judge**
+COMPARES the drafts across five angles; then a fixed **Opus 4.8 @ max**
+coordinator SYNTHESIZES one final answer from that comparison.
+
+```
+panel (same task, grounded, blinded A/B/C)
+  -> JUDGE compares: consensus | contradictions | partial coverage | unique insights | blind spots
+  -> COORDINATOR synthesizes the final answer FROM the judge's analysis
+```
+
+This mirrors Fusion's division of labour: the judge **compares** the candidate
+responses (it does not merge them, vote, grade, or write the answer), and the
+calling/coordinator model writes the final answer **from** that comparison. See
+the [Fusion router docs](https://openrouter.ai/docs/guides/routing/routers/fusion-router)
+and ["Fusion beats frontier"](https://openrouter.ai/blog/announcements/fusion-beats-frontier/).
 
 ## Layout
 ```
 concordia/
-├── config.yaml            # orchestrator + synthesizer: Opus 4.8 @ max, cost advisor OFF
+├── config.yaml            # coordinator + synthesizer: Opus 4.8 @ max, cost advisor OFF
 └── agents/
-    ├── claude/            # expert — Claude Opus 4.8 @ max
-    ├── codex/             # expert — GPT-5.5 @ xhigh
-    ├── pi/                # expert — GLM 5.2 via OpenRouter
-    └── verifier/          # gated adversarial verifier — GPT-5.5 (≠ synthesizer vendor)
+    ├── claude/            # panel expert — Claude Opus 4.8 @ max (grounded)
+    ├── codex/             # panel expert — GPT-5.5 @ xhigh (grounded, local codex login)
+    ├── pi/                # panel expert — GLM 5.2 via OpenRouter (grounded)
+    └── judge/             # Fusion judge — Opus 4.8 @ max, COMPARES the blinded drafts
 ```
+
+## Pipeline
+1. **Fan out (parallel).** The coordinator sends the SAME task verbatim to all
+   three experts at once. Each expert is independently grounded
+   (`web_fetch` + shell + read) and returns its own best, self-contained draft
+   plus its load-bearing claims, assumptions, and "what would change my answer".
+2. **Blind.** The coordinator relabels the drafts A/B/C and strips every model
+   identity, so neither it nor the judge can favour a particular model's draft
+   (the coordinator is itself the "claude" panelist's model).
+3. **Judge (compare).** The blinded drafts plus the task go to the `judge`,
+   which returns ONE JSON object comparing them across exactly five angles:
+   `consensus`, `contradictions`, `partial_coverage`, `unique_insights`,
+   `blind_spots`. The judge only compares — it never merges, votes, grades, or
+   writes the answer.
+4. **Synthesize.** The coordinator reads the judge's five-angle analysis and
+   writes ONE final answer from it: builds on the consensus (weighed by the
+   evidence each draft supplied), resolves each contradiction by the stronger
+   evidence, folds in unique insights worth keeping, and closes the coverage
+   gaps and blind spots (or flags any it cannot). The judge owns the
+   comparison; the coordinator owns the prose.
 
 ## Prerequisites (per machine)
 The YAML is portable; the runtime each harness reaches into is not. Each install needs:
 - **omnigent** installed.
-- **Vendor CLIs + logins:** `claude` (→ Opus 4.8), `codex` (→ GPT-5.5), `pi` (→ GLM 5.2).
-  Install + log in via `omnigent setup` (walks per-harness provider/creds).
+- **Vendor CLIs + logins:** `claude` (→ Opus 4.8, also runs the judge), `codex`
+  (→ GPT-5.5), `pi` (→ GLM 5.2). Install + log in via `omnigent setup` (walks
+  per-harness provider/creds). The codex panelist is pinned to the local codex
+  CLI subscription (`executor.auth: {type: provider, name: codex}`), so it boots
+  on `~/.codex/auth.json` with **no** `$OPENAI_API_KEY`.
 - **Model access:** `claude-opus-4-8` (Claude login), `gpt-5.5` (Codex login),
   `z-ai/glm-5.2` (the BARE OpenRouter slug — no `openrouter/` prefix; the pi
   worker passes the model id to OpenRouter verbatim, so a prefix would 404).
@@ -30,7 +65,8 @@ The YAML is portable; the runtime each harness reaches into is not. Each install
 - **The pi 64KB reader patch (PR #48)** — until it merges upstream, see Bootstrap.
 
 **Graceful degradation:** if a leg can't boot (e.g. no OpenRouter credits), the
-orchestrator proceeds with the remaining experts — the panel still runs on two.
+coordinator proceeds with the remaining experts — the panel still runs on two,
+and the judge compares whatever drafts arrived.
 
 ## Run
 ```
@@ -60,6 +96,7 @@ panelist tool-light (no >64KB tool outputs).
   whatever server you run.)
 
 ## Provenance
-P0 (pinned Opus-4.8-max synthesizer + draft blinding), P1 (evidence-based claim
-table + unverified-consensus rule), P2 (gated different-vendor verifier) —
-applied and cross-reviewed against the omnigent spec.
+Pinned Opus-4.8-max coordinator + draft blinding; a separate Fusion judge that
+compares the blinded drafts across the five Fusion angles; coordinator-owned
+synthesis from that comparison — applied and validated against the omnigent
+spec (`omnigent.spec.load` + per-agent `validate`).
