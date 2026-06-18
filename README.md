@@ -47,7 +47,7 @@ What git does **not** carry — set up once per machine:
 - Each harness's CLI + login (`omnigent setup`); auth tokens are local
   (`~/.omnigent/auth_tokens.json`), not synced.
 - Model access / credits for whatever a team pins (e.g. `concordia` needs Claude
-  Opus 4.8, GPT-5.5, and OpenRouter DeepSeek-V4-Pro **with credits**).
+  Opus 4.8, GPT-5.5, and OpenRouter GLM 5.2 **with credits**).
 - Any stopgap patch a team documents (e.g. `concordia`'s pi leg needs omnigent
   PR #48 until it merges — see `concordia/README.md`).
 
