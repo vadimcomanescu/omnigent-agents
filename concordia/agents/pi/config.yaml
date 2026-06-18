@@ -6,7 +6,7 @@ executor:
   config:
     harness: pi
 llm:
-  model: openrouter/deepseek/deepseek-v4-pro
+  model: openrouter/z-ai/glm-5.2
 os_env:
   type: caller_process
   cwd: .
