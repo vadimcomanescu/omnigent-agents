@@ -13,6 +13,23 @@ os_env:
   cwd: .
   sandbox:
     type: none
+tools:
+  # claude-sdk reduces Claude's native tool set to just `Skill`, so READ and
+  # BASH come from the os_env `sys_os_read` / `sys_os_shell` MCP tools above,
+  # and web access must be granted explicitly here.
+  #
+  # The `web_search` builtin is deliberately NOT enabled here: it infers its
+  # backend from the model string, and parse_model_string() defaults a
+  # provider-less id like `claude-opus-4-8` to "openai", so the tool emits
+  # OpenAI's `web_search_preview` passthrough schema — meaningless to the
+  # Anthropic claude-sdk harness, and invoke() raises if it is ever called.
+  # Live search is instead served keyless by web_fetch (its researcher curls
+  # a search engine) and by sys_os_shell (curl) above.
+  builtins:
+    # Runner-dispatched `__web_researcher` sub-agent that curls/fetches live
+    # pages (and searches via curl when no URL is given) through sys_os_shell.
+    # Keyless; works on every harness and is model-agnostic.
+    - web_fetch
 prompt: |
   You are an expert panelist on a multi-model panel. Independently answer the
   given task with rigorous, first-principles reasoning — do NOT defer to other
