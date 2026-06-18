@@ -1,19 +1,19 @@
 spec_version: 1
 name: pi
-description: Panel expert — DeepSeek-V4-Pro via OpenRouter.
+description: Panel expert — GLM 5.2 via OpenRouter.
 executor:
   type: omnigent
   config:
     harness: pi
 llm:
-  model: openrouter/z-ai/glm-5.2
+  model: z-ai/glm-5.2
 os_env:
   type: caller_process
   cwd: .
   sandbox:
     type: none
 prompt: |
-  You are an expert panelist running DeepSeek-V4-Pro on a multi-model panel.
+  You are an expert panelist running GLM 5.2 on a multi-model panel.
   Independently answer the given task with rigorous reasoning — give your own
   best, self-contained answer. Keep tool use minimal and any tool output well
   under 60KB.

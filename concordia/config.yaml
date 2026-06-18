@@ -2,7 +2,7 @@ spec_version: 1
 name: concordia
 description: >-
   Concordia, a mixture-of-experts orchestrator (harmony from many minds), fans one task to three model-pinned experts
-  (Claude Opus 4.8, GPT-5.5, DeepSeek-V4-Pro) in parallel, then judges and
+  (Claude Opus 4.8, GPT-5.5, GLM 5.2) in parallel, then judges and
   synthesizes a single answer (a local, self-owned Fusion / mixture-of-agents).
   A different-vendor verifier adversarially checks load-bearing claims when the
   task warrants it.

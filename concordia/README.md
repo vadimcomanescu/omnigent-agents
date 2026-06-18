@@ -13,19 +13,20 @@ concordia/
 └── agents/
     ├── claude/            # expert — Claude Opus 4.8 @ max
     ├── codex/             # expert — GPT-5.5 @ xhigh
-    ├── pi/                # expert — DeepSeek-V4-Pro via OpenRouter
+    ├── pi/                # expert — GLM 5.2 via OpenRouter
     └── verifier/          # gated adversarial verifier — GPT-5.5 (≠ synthesizer vendor)
 ```
 
 ## Prerequisites (per machine)
 The YAML is portable; the runtime each harness reaches into is not. Each install needs:
 - **omnigent** installed.
-- **Vendor CLIs + logins:** `claude` (→ Opus 4.8), `codex` (→ GPT-5.5), `pi` (→ DeepSeek).
+- **Vendor CLIs + logins:** `claude` (→ Opus 4.8), `codex` (→ GPT-5.5), `pi` (→ GLM 5.2).
   Install + log in via `omnigent setup` (walks per-harness provider/creds).
 - **Model access:** `claude-opus-4-8` (Claude login), `gpt-5.5` (Codex login),
-  `openrouter/deepseek/deepseek-v4-pro` (an OpenRouter provider with
-  `$OPENROUTER_API_KEY` **and credits** — DeepSeek-V4-Pro is paid; omnigent does
-  not provision credits).
+  `z-ai/glm-5.2` (the BARE OpenRouter slug — no `openrouter/` prefix; the pi
+  worker passes the model id to OpenRouter verbatim, so a prefix would 404).
+  Needs an OpenRouter provider with `$OPENROUTER_API_KEY` **and credits** for
+  any paid model — omnigent does not provision credits.
 - **The pi 64KB reader patch (PR #48)** — until it merges upstream, see Bootstrap.
 
 **Graceful degradation:** if a leg can't boot (e.g. no OpenRouter credits), the
