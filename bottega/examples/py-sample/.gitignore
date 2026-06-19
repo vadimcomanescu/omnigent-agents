@@ -7,5 +7,8 @@ uv.lock
 poetry.lock
 Pipfile.lock
 
-# bottega runtime registry (per-target, never committed)
-.bottega/
+# bottega runtime scratch (registry, worktrees, APS binaries, pinned venv) — never
+# committed — but the pinned APS lock IS tracked (a whole-dir ignore can't re-include
+# a child, so ignore the contents and negate the lock).
+.bottega/*
+!.bottega/aps.lock

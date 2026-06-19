@@ -1,0 +1,8 @@
+# bottega runtime scratch (per-target): the registry JSON, the .bottega/wt/<id>
+# worktrees, and the SHA-256-verified APS binaries in .bottega/bin/ are all run-time
+# state, never committed. The APS lockfile (.bottega/aps.lock) IS committed — so
+# ignore the directory's contents and re-include the lock (a whole-dir `.bottega/`
+# ignore can't re-include a child). Matches the target gitignore the coordinator
+# writes at run time (config.yaml + slice-wavefront).
+.bottega/*
+!.bottega/aps.lock
