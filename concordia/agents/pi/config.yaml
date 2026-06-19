@@ -1,19 +1,35 @@
 spec_version: 1
 name: pi
-description: Panel expert — DeepSeek-V4-Pro via OpenRouter.
+description: Panel expert — GLM 5.2 via OpenRouter.
 executor:
   type: omnigent
   config:
     harness: pi
 llm:
-  model: openrouter/deepseek/deepseek-v4-pro
+  model: z-ai/glm-5.2
 os_env:
   type: caller_process
   cwd: .
   sandbox:
     type: none
+tools:
+  # pi exposes no native web tools, so READ and BASH come from the os_env
+  # `sys_os_read` / `sys_os_shell` MCP tools above and web access is granted
+  # explicitly here.
+  #
+  # The `web_search` builtin is deliberately NOT enabled here: it infers the
+  # search backend from the model string via parse_model_string(), which
+  # raises "Unknown provider 'z-ai'" for the OpenRouter model id
+  # `z-ai/glm-5.2` and would crash ToolManager registration. Live search is
+  # instead served keyless by web_fetch (its researcher curls a search engine)
+  # and by sys_os_shell (curl) above.
+  builtins:
+    # Runner-dispatched `__web_researcher` sub-agent that curls/fetches live
+    # pages (and searches via curl when no URL is given) through sys_os_shell.
+    # Keyless; works on every harness and is model-agnostic.
+    - web_fetch
 prompt: |
-  You are an expert panelist running DeepSeek-V4-Pro on a multi-model panel.
+  You are an expert panelist running GLM 5.2 on a multi-model panel.
   Independently answer the given task with rigorous reasoning — give your own
   best, self-contained answer. Keep tool use minimal and any tool output well
   under 60KB.

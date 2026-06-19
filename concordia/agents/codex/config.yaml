@@ -5,6 +5,16 @@ executor:
   type: omnigent
   config:
     harness: codex
+  # Pin the codex CLI subscription provider (kind: subscription, ~/.codex/auth.json,
+  # no API key) so routing travels with the bundle. A provider-type auth resolves
+  # AHEAD of the openai-family default; without it the codex harness falls through
+  # to the host's default openai provider (kind: key), which demands the unset
+  # $OPENAI_API_KEY and fails boot with "Unresolved environment variable
+  # '$OPENAI_API_KEY'". `name: codex` references the codex provider in
+  # ~/.omnigent/config.yaml. (omnigent/spec/types.py ProviderAuth.)
+  auth:
+    type: provider
+    name: codex
 llm:
   model: gpt-5.5
   reasoning_effort: xhigh
@@ -13,6 +23,15 @@ os_env:
   cwd: .
   sandbox:
     type: none
+tools:
+  # codex already ships native web_search (HARNESS_CODEX_ENABLE_WEB_SEARCH
+  # defaults True) and a native shell, and READ/BASH are also covered by the
+  # os_env `sys_os_read` / `sys_os_shell` tools above — so the only missing
+  # capability is a dedicated live-page fetch.
+  builtins:
+    # Runner-dispatched `__web_researcher` sub-agent that curls/fetches live
+    # pages via sys_os_shell. Keyless.
+    - web_fetch
 prompt: |
   You are an expert panelist on a multi-model panel. Independently answer the
   given task with rigorous, first-principles reasoning — do NOT defer to other
