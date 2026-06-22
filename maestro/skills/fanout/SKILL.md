@@ -6,7 +6,10 @@ description: Run independent subtasks in parallel — one git worktree and one i
 # fanout — safe parallel execution
 
 Use ONLY for subtasks that are parallel-safe (no shared files, no ordering
-dependency).
+dependency). Cut and contract those subtasks with `decomposition` first: fanout
+parallelizes the delivery-axis units it produces, and a single task may itself
+run as a fresh-session LOOP on its own branch when one clean context cannot
+hold it.
 
 ## Procedure
 1. Per task, create an isolated worktree:
