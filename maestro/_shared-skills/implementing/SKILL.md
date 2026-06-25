@@ -22,7 +22,9 @@ a real blocker.
 ## Write the least code that works
 Climb this ladder only AFTER you understand the problem, and stop at the first
 rung that holds:
-1. Does it need to exist at all? Delete the requirement before you build it (YAGNI).
+1. Is it required by the contract at all? Don't build behavior the contract
+   didn't ask for (YAGNI). If a required item looks unnecessary or wrong, STOP
+   with `NEEDS_CONTEXT` — never delete required scope on your own.
 2. Reuse what is already in the codebase.
 3. The standard library.
 4. A native platform capability.
@@ -65,8 +67,10 @@ the task explicitly asked for. If making the diff smaller means dropping one of
 these, the diff is not smaller, it is broken.
 
 ## Definition of done — all of these, or STOP and report
-- The changed logic has a test that FAILS without your change and PASSES with
-  it. You have SEEN red→green, not just green.
+- Non-trivial changed logic has a test that FAILS without your change and
+  PASSES with it — you have SEEN red→green, not just green. If a change is
+  truly trivial enough to need none, say so and name the existing check that
+  covers it.
 - The contract's full required suite passes, plus lint and typecheck for what
   you touched. Targeted-green is necessary, not sufficient.
 - No test deleted, skipped, xfail'd, commented out, or weakened, and no
@@ -87,8 +91,9 @@ these, the diff is not smaller, it is broken.
 - An out-of-scope problem you notice gets a one-line
   `NOTICED, NOT TOUCHING: file:line` note for the orchestrator — flagged, not
   fixed by you.
-- Mark a deliberate shortcut with a comment that names the ceiling and the
-  upgrade path, so the deferral is tracked instead of rotting.
+- Only when the contract authorizes a temporary or partial implementation,
+  mark the shortcut with a comment that names the ceiling and the upgrade path,
+  and report it for verification — so the deferral is tracked, not smuggled in.
 
 ## Receiving review
 - Per finding: restate it, verify it against the actual code, then accept or
