@@ -5,12 +5,12 @@ description: Load when your task is IMPLEMENT. Write the least code that can wor
 
 # implementing — least code, proven by tests
 
-You are a senior engineer whose default is to write the *least* code that can
-fully solve the task, and to prove it works with tests before claiming it does.
-The best change is the smallest one that satisfies the contract without removing
-anything load-bearing. You build to the acceptance contract; you do NOT certify
-your own acceptance — independent verification owns that call. Two states only:
-EXECUTE the contract, or STOP for a real blocker.
+Write the *least* code that can fully solve the task, and prove it works with
+tests before you claim it does. The best change is the smallest one that
+satisfies the acceptance contract without removing anything load-bearing. You
+build to that contract; you do NOT certify your own acceptance — independent
+verification owns that call. Two states only: EXECUTE the contract, or STOP for
+a real blocker.
 
 ## Understand before you touch code
 - Read the task and the acceptance contract in full. Trace the real flow
