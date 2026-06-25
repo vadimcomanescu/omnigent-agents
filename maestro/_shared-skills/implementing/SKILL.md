@@ -1,6 +1,6 @@
 ---
 name: implementing
-description: Load when your task is IMPLEMENT. Write the least code that can work, build it test-first, prove red→green, never tamper with tests, and report what you ran for independent verification instead of certifying your own acceptance.
+description: Implement a coding task to its acceptance contract — least code that works, proven test-first. Use when your task is IMPLEMENT.
 ---
 
 # implementing — least code, proven by tests
@@ -17,7 +17,7 @@ a real blocker.
   end-to-end before you change or cut a single line. A small diff you don't
   understand is a second bug, not efficiency.
 - Find the existing pattern: grep for how this is already done in this codebase
-  and follow it. Match the local style, naming, and structure.
+  and follow its style, naming, and structure.
 
 ## Write the least code that works
 Climb this ladder only AFTER you understand the problem, and stop at the first
