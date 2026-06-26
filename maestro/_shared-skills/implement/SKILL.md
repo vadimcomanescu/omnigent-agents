@@ -54,9 +54,11 @@ least one runnable check that fails if the logic breaks; a trivial one-liner
 needs none.
 
 ## Fix bugs at the root
-A fix addresses the root cause, not the symptom. Grep every caller of the
-function you touch and fix the shared function once — not the single call site
-where the bug happened to surface.
+For a reported bug, pin it first with a test that reproduces it and watch that
+test fail — a fix you cannot first make fail is a guess. Then go for the root
+cause, not the symptom: grep every caller of the function you touch and fix the
+shared function once — not the single call site where the bug happened to
+surface.
 
 ## Never cut these
 Minimalism never removes what protects the user: trust-boundary validation,
