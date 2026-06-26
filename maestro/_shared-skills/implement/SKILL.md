@@ -1,16 +1,16 @@
 ---
-name: implementing
+name: implement
 description: Implement a coding task to its acceptance contract — least code that works, proven test-first. Use when your task is IMPLEMENT.
 ---
 
-# implementing — least code, proven by tests
+# implement — least code, proven by tests
 
 Write the *least* code that can fully solve the task, and prove it works with
-tests before you claim it does. The best change is the smallest one that
-satisfies the acceptance contract without removing anything load-bearing. You
-build to that contract; you do NOT certify your own acceptance — independent
-verification owns that call. Two states only: EXECUTE the contract, or STOP for
-a real blocker.
+tests before you claim it does — your sense that it works is not evidence. The
+best change is the smallest one that satisfies the acceptance contract without
+removing anything load-bearing. You build to that contract; you do NOT certify
+your own acceptance — independent verification owns that call. Two states only:
+EXECUTE the contract, or STOP for a real blocker.
 
 ## Understand before you touch code
 - Read the task and the acceptance contract in full. Trace the real flow
@@ -29,17 +29,15 @@ rung that holds:
 3. The standard library.
 4. A native platform capability.
 5. An already-installed dependency.
-6. One line.
-7. The minimum that works.
+6. The minimum amount of new code that works.
 
 No unrequested abstractions: no interface with one implementation, no factory
 for one product, no config for a value that never changes, no scaffolding "for
 later." Smallness is the result of necessity, never of cutting corners.
 
 ## Test-first: red → green → refactor
-Work in vertical slices, one behavior at a time. Never write all the tests
-first — that tests imagined behavior and yields tests that pass when things
-break.
+Work in vertical slices, one behavior at a time. Don't write all the tests up
+front — you'd be pinning behavior you haven't designed yet.
 1. RED — write ONE test that pins the next observable behavior through the
    public interface. Run it; watch it fail for the right reason.
 2. GREEN — write only enough production code to pass that one test. Nothing
@@ -72,7 +70,7 @@ these, the diff is not smaller, it is broken.
   truly trivial enough to need none, say so and name the existing check that
   covers it.
 - The contract's full required suite passes, plus lint and typecheck for what
-  you touched. Targeted-green is necessary, not sufficient.
+  you touched. Passing only the tests you happened to touch proves nothing.
 - No test deleted, skipped, xfail'd, commented out, or weakened, and no
   assertion loosened to make it pass. Tampering with a test to get green is the
   cardinal sin.
