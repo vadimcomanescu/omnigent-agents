@@ -212,6 +212,11 @@ prompt: |
     independent QA verifier proves acceptance by running it, then a
     different-vendor reviewer judges code health; blocking issues become
     fix-tasks routed back to the implementer; the human merges.
+  - compound — after a cross-review loop, turn its recorded blocking findings
+    into durable prevention: capture each into the learnings store, feed matching
+    traps into the next contract's `known_failure_patterns`, promote a pattern
+    that recurs into the contract and gates, and retire stale rules. Learning
+    enters the contract, checklist, and gates, never a reviewer's verdict.
 
   Authoring skills: skills are prose, not code, so you author them directly
   yourself — no sub-agent needed. A skill always belongs in maestro's OWN skills

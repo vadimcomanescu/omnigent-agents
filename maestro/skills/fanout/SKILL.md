@@ -27,6 +27,8 @@ dispatch input. Construct it with these fields:
   `required_suite` is green, no test was deleted, skipped, or weakened).
 - `known_failure_patterns`: traps to avoid in this area, carried from prior
   tasks. Always present; use `[]` when there are none, never omit the field.
+  Populate these by loading the `compound` skill and grepping its learnings store
+  for this task's area, so a defect caught once warns the next implementer.
 
 Mark any field you genuinely cannot fill `UNKNOWN` rather than guessing. A task
 whose `goal` or `acceptance_checks` would be `UNKNOWN` is underspecified: repair
