@@ -23,11 +23,14 @@ can pass one and fail the other, so both gate the merge.
    HEAD commit) for QA.
 2. Run the deterministic gates first (mechanical, no LLM): the contract's
    `required_suite` (tests / lint / typecheck) via `sys_os_shell`; a diff-scan
-   for test tampering, where any test deleted, `skip`/`xfail`-ed, commented out,
-   or any assertion weakened in the diff is an automatic block; and a
-   workspace-hygiene check, where the branch, HEAD commit, and PR URL match what
-   the implementer reported. If any gate fails, re-dispatch the implementer to
-   fix it first; don't involve QA or the reviewer until the gates are green.
+   for mechanical test tampering, where a test is deleted, a `skip`/`xfail` is
+   added, or a test or assertion line is commented out or removed, is an
+   automatic block (the semantic "assertion quietly rewritten to match the bug"
+   judgement is NOT this gate's job; it stays with the reviewer's
+   `suspected-tampered-assertion` flag); and a workspace-hygiene check, where the
+   branch, HEAD commit, and PR URL match what the implementer reported. If any
+   gate fails, re-dispatch the implementer to fix it first; don't involve QA or
+   the reviewer until the gates are green.
 3. **Independent QA.** Dispatch a DIFFERENT-vendor sub-agent with
    `purpose: "qa-verify"` to prove acceptance:
    `sys_session_send(agent=<different vendor than the implementer>,
@@ -74,9 +77,8 @@ can pass one and fail the other, so both gate the merge.
    grinding code against a broken spec.
 
 ## Notes
-- **The contract is the one maestro authored at dispatch** (its schema lives in
-  the `fanout` skill: `goal`, in/out of scope, runnable `acceptance_checks`,
-  `required_suite`, `done_when`). QA proves the `acceptance_checks` by
+- **The contract is the one maestro authored at dispatch** (its full schema
+  lives in the `fanout` skill). QA proves the contract's `acceptance_checks` by
   observation; review judges the diff against the same contract. If no contract
   exists yet, author one to that schema before dispatching QA or review.
 - **Independence is by RESOLVED vendor, not agent name.** The implementer, the QA

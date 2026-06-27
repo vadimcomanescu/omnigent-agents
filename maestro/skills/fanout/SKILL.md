@@ -26,7 +26,7 @@ dispatch input. Construct it with these fields:
 - `done_when`: the explicit finish line (all `acceptance_checks` pass, the
   `required_suite` is green, no test was deleted, skipped, or weakened).
 - `known_failure_patterns`: traps to avoid in this area, carried from prior
-  tasks (omit if none).
+  tasks. Always present; use `[]` when there are none, never omit the field.
 
 Mark any field you genuinely cannot fill `UNKNOWN` rather than guessing. A task
 whose `goal` or `acceptance_checks` would be `UNKNOWN` is underspecified: repair
