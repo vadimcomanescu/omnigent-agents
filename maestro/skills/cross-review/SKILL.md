@@ -21,9 +21,13 @@ can pass one and fail the other, so both gate the merge.
 1. Get the task's diff — `sys_os_shell("gh pr diff <pr>")` (or
    `git -C .worktrees/<task_id> diff main...HEAD`) — and the PR ref (branch +
    HEAD commit) for QA.
-2. Run the deterministic gates first — tests / lint / typecheck via
-   `sys_os_shell`. If red, re-dispatch the implementer to drive it green first;
-   don't involve QA or the reviewer yet.
+2. Run the deterministic gates first (mechanical, no LLM): the contract's
+   `required_suite` (tests / lint / typecheck) via `sys_os_shell`; a diff-scan
+   for test tampering, where any test deleted, `skip`/`xfail`-ed, commented out,
+   or any assertion weakened in the diff is an automatic block; and a
+   workspace-hygiene check, where the branch, HEAD commit, and PR URL match what
+   the implementer reported. If any gate fails, re-dispatch the implementer to
+   fix it first; don't involve QA or the reviewer until the gates are green.
 3. **Independent QA.** Dispatch a DIFFERENT-vendor sub-agent with
    `purpose: "qa-verify"` to prove acceptance:
    `sys_session_send(agent=<different vendor than the implementer>,
@@ -58,14 +62,23 @@ can pass one and fail the other, so both gate the merge.
    fresh worker with no memory of the task. Then loop to step 1 — re-run gates,
    re-QA, re-review the delta.
 6. When gates are green, QA is `PASS` (or `SKIP`), AND there are zero blocking
-   review findings, the PR passes — mark it ready in the registry (with its PR
-   URL) and leave it for the human to merge. maestro does NOT merge it.
+   review findings, the PR passes. Mark it ready in the registry with its PR
+   URL, the resolved vendors of the implementer / QA verifier / reviewer, and the
+   blocking findings from each round. Recording the vendors and findings is what
+   keeps the cross-vendor independence auditable: if one vendor never catches
+   what another does, the registry is where that shows up. Leave it for the human
+   to merge. maestro does NOT merge it.
 7. Cap the loop at three cycles. If blocking items still stand, STOP and escalate
    to the human with the QA artifact and the open review findings. If a finding
    shows the contract itself is the defect, reopen the contract rather than
    grinding code against a broken spec.
 
 ## Notes
+- **The contract is the one maestro authored at dispatch** (its schema lives in
+  the `fanout` skill: `goal`, in/out of scope, runnable `acceptance_checks`,
+  `required_suite`, `done_when`). QA proves the `acceptance_checks` by
+  observation; review judges the diff against the same contract. If no contract
+  exists yet, author one to that schema before dispatching QA or review.
 - **Independence is by RESOLVED vendor, not agent name.** The implementer, the QA
   verifier, and the reviewer should each resolve to a different vendor where the
   roster allows; at minimum QA and review must EACH differ from the implementer.

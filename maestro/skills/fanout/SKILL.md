@@ -8,6 +8,30 @@ description: Run independent subtasks in parallel — one git worktree and one i
 Use ONLY for subtasks that are parallel-safe (no shared files, no ordering
 dependency).
 
+## The acceptance contract
+
+Every implement dispatch carries an acceptance contract: the one artifact the
+implementer builds to, the QA verifier proves against, and the reviewer judges
+against. maestro authors it BEFORE dispatch and passes it verbatim in the
+dispatch input. Construct it with these fields:
+
+- `goal`: one sentence stating the behavior change this task must deliver.
+- `in_scope`: the files / surfaces the task may touch.
+- `out_of_scope`: what it must NOT touch or change.
+- `acceptance_checks[]`: each a runnable command OR an observable runtime
+  behavior, paired with its expected result. QA executes these to prove
+  acceptance, so each must be observable by running the product, never "the
+  code looks right".
+- `required_suite`: the exact test / lint / typecheck command(s) that must pass.
+- `done_when`: the explicit finish line (all `acceptance_checks` pass, the
+  `required_suite` is green, no test was deleted, skipped, or weakened).
+- `known_failure_patterns`: traps to avoid in this area, carried from prior
+  tasks (omit if none).
+
+Mark any field you genuinely cannot fill `UNKNOWN` rather than guessing. A task
+whose `goal` or `acceptance_checks` would be `UNKNOWN` is underspecified: repair
+or reject it before dispatch, not after a worker has built the wrong thing.
+
 ## Procedure
 1. Per task, create an isolated worktree:
    `sys_os_shell("git worktree add .worktrees/<task_id> -b maestro/<task_id>")`.
