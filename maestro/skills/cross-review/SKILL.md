@@ -27,7 +27,7 @@ can pass one and fail the other, so both gate the merge.
 3. **Independent QA.** Dispatch a DIFFERENT-vendor sub-agent with
    `purpose: "qa-verify"` to prove acceptance:
    `sys_session_send(agent=<different vendor than the implementer>,
-   title="qa-<task_slug>", args={purpose: "qa-verify", input: "<the acceptance
+   title="qa-<task_slug>", args={"purpose": "qa-verify", "input": "<the acceptance
    contract> + <the PR ref>. Check it out, RUN it, prove each acceptance
    criterion by observation. Do not edit. Return the proof-of-acceptance
    artifact + a PASS/FAIL/BLOCKED/SKIP verdict."})`. The QA worker's resolved
@@ -39,7 +39,7 @@ can pass one and fail the other, so both gate the merge.
    `purpose: "review"` (a different vendor than the implementer; ideally also
    different from QA):
    `sys_session_send(agent="claude_code"|"codex"|"pi", title="review-<task_slug>",
-   args={purpose: "review", input: "<the diff> + <the acceptance contract> +
+   args={"purpose": "review", "input": "<the diff> + <the acceptance contract> +
    <QA's evidence as facts>. Review ONLY against the contract. Report blocking /
    non-blocking / suggestions with file:line. Do not run code. Do not edit."})`.
    Give it the diff as text and QA's evidence as facts — do NOT point it at the
@@ -80,8 +80,10 @@ can pass one and fail the other, so both gate the merge.
   implementer ever opens or updates a PR, so a stray QA or reviewer edit never
   reaches the deliverable.
 - **Test-integrity is split.** Review statically flags a `suspected-tampered-
-  assertion @ file:line` (a test rewritten to match broken behavior); QA consumes
-  those flags as mutation targets and proves them at runtime (revert the fix →
-  the covering test must go red). A green suite is never acceptance proof.
+  assertion @ file:line` (a test rewritten to match broken behavior). That flag
+  blocks and routes back to the implementer like any finding; the NEXT QA cycle
+  then proves the targeted assertion by mutation (revert the fix → the covering
+  test must go red). QA also mutation-tests the change’s core behavior every
+  cycle, so a green suite is never acceptance proof.
 - Non-blocking issues / suggestions go in the registry as follow-ups; they don't
   block the PR.
