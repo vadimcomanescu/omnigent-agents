@@ -53,9 +53,10 @@ recorded findings, never a finding you imagine could happen.
 ## Retrieve (at contract authoring)
 
 Before dispatching an implement task (`fanout`'s contract step), grep the store
-for the task's area and surfaces. Every matching entry's `fix` becomes a line in
-that contract's `known_failure_patterns`, unless the entry's `do_not_apply_when`
-holds for this task. This is how a lesson re-enters the loop: as a named trap the
+by the task's area, the surfaces it touches, and the frameworks or libraries in
+play. Every matching entry's `fix` becomes a line in that contract's
+`known_failure_patterns`, unless the entry's `do_not_apply_when` holds for this
+task. This is how a lesson re-enters the loop: as a named trap the
 implementer reads and the QA verifier and reviewer judge against, identical input
 for all three.
 
@@ -86,8 +87,9 @@ property exists to remove.
 
 ## Garbage-collect
 
-A rule that blocks nothing in 30 consecutive PRs has either been fixed at the
-source or was never general. Retire it: drop it from the contract template, the
+At capture time, while you are already touching the store after a loop, also
+retire any rule that has blocked nothing in 30 consecutive PRs: it was either
+fixed at the source or was never general. Drop it from the contract template, the
 checklist, or the gate it was promoted into, and mark the store entry archived
 with its final `last_seen`. The store must stay small enough to grep and trust; a
 corpus that only grows rots into noise.

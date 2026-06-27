@@ -9,3 +9,18 @@ This directory starts empty by design. Entries are written ONLY from real
 cross-review findings, never seeded by hand: a store padded with guesses routes
 noise into every future contract. See `maestro/skills/compound/SKILL.md` for the
 entry schema and the capture / retrieve / promote / garbage-collect procedure.
+
+## Entry format
+
+Each entry in `<category>/<category>.md` follows this shape. This is the format
+only, not a learning; do not commit it as an entry:
+
+```
+- category: <stable-slug>
+  root_cause: <one line, the cause not the symptom>
+  contract_gap: <which acceptance-contract field would have caught it>
+  fix: <the concrete correction applied>
+  do_not_apply_when: []
+  count: 1
+  last_seen: <PR ref, YYYY-MM-DD>
+```
