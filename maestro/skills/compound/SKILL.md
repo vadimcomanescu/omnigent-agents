@@ -87,8 +87,10 @@ blocking findings it recorded in the registry for every round, and for each:
 - match: append the PR ref under `## Related Issues`, set `last_refreshed` to
   today, and add detail only if this occurrence teaches something new.
 
-Capture is the ONLY write to the store, and its input is the registry's real
-recorded findings, never a finding you imagine could happen.
+Capture is the only path by which a new learning ENTERS the store, and its input
+is the registry's real recorded findings, never one you imagine could happen. The
+sole other writes are maintenance, the suppression edits and garbage-collect
+archival below; no path seeds an invented entry.
 
 ## Retrieve (at contract authoring)
 
@@ -130,12 +132,13 @@ property exists to remove.
 ## Garbage-collect
 
 At capture time, while you are already in the store after a loop, retire any
-file that has blocked nothing in 30 consecutive PRs (judged by `last_refreshed`,
-or `date` if never refreshed): it was fixed at the source or was never general.
-Remove the trap from the contract template, checklist, or gate it was promoted
-into, and move the file to `docs/solutions/archived/` with its final date. The
-store must stay small enough to grep and trust; a corpus that only grows rots
-into noise.
+file that has matched no task and blocked nothing across the last 30 PRs the
+registry records. Count that quiet window from the registry's loop log, not from
+the file's dates; `date` and `last_refreshed` stay as CE metadata, not GC
+counters. A retired file was fixed at the source or was never general: remove the
+trap from the contract template, checklist, or gate it was promoted into, and
+move the file to `docs/solutions/archived/` with its final date. The store must
+stay small enough to grep and trust; a corpus that only grows rots into noise.
 
 ## The reviewer stays amnesic
 
