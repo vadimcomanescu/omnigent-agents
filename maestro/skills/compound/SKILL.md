@@ -21,11 +21,20 @@ than none, because it routes noise into every future contract.
 
 ## The learnings store
 
-The store is `docs/solutions/` at the repo root, byte-compatible with Compound
-Engineering's format so the same files are readable by either toolchain. No new
+The store is `docs/solutions/` at the repo root, compatible with Compound
+Engineering's format so the same files are readable by either toolchain.
+"Compatible" means a file maestro writes is a valid CE solution file and a CE
+solution file is one maestro can read; it does not mean CE follows its own
+declared schema perfectly (CE declares a `component` enum it does not enforce,
+and its real store uses far fewer category dirs than its declared map). No new
 standard and no index file: discovery is grep over frontmatter, and the
 directory is created on demand (`mkdir -p docs/solutions/<category>/`) on the
 first real write. One file per learning, never one file per category:
+
+maestro writes only CE's **Bug track** (`problem_type: bug`): every entry comes
+from a cross-review or QA blocking finding, and those are defects. CE also
+defines a Knowledge track for non-defect lessons; maestro does not write it,
+because maestro's only learning source is caught defects, not general knowledge.
 
     docs/solutions/<category>/<problem-slug>.md
 
@@ -39,22 +48,31 @@ Each file is YAML frontmatter plus fixed body sections:
 ---
 title: "One-line defect title"
 date: 2026-06-28
-last_refreshed: 2026-06-28   # add only when the same defect recurs
 category: <subdirectory name>
-module: <area or component the defect lived in>
-problem_type: <stable defect-class slug>
-component: <free-form area; CE's component enum is Rails-specific, do not import it>
+module: <area the defect lived in>
+problem_type: bug            # maestro writes only CE's Bug track
+component: <free-form area, e.g. parser, auth-middleware; CE declares a component
+            enum but does not enforce it, and its own files use free-form values>
+symptoms: <one line: how it manifested in the diff or at runtime>
+root_cause: <one line: the underlying cause, not the symptom>
+resolution_type: <free-form CE class, e.g. code_fix, test_fix, config_change>
 severity: critical|high|medium|low
 tags: [kebab, keywords, for, grep]
+# refresh-maintenance fields, written by capture only when the defect recurs:
+last_refreshed: 2026-06-28   # set on every recurrence
+related: [other-solution-slugs]   # cross-links to related learnings, not PRs
+related_pr: [pr-refs]        # frontmatter mirror of ## Related Issues, for grep
 ---
 
 # One-line defect title
 
 ## Problem
-The defect, stated as its root cause not its symptom.
+The defect in prose, stated as its root cause not its symptom; the `root_cause`
+frontmatter field is the one-line grep version of this.
 
 ## Symptoms
-How it showed up in the diff or at runtime.
+How it showed up in the diff or at runtime, in prose; the `symptoms` frontmatter
+field is the one-line grep version.
 
 ## What Didn't Work
 The implementer's failed attempt, when the route-back recorded one. Omit if none.
@@ -82,10 +100,12 @@ When `cross-review` finishes a PR (step 6 ready, or step 7 escalated), read the
 blocking findings it recorded in the registry for every round, and for each:
 
 - grep `docs/solutions/<category>/` for a file already covering this root cause.
-- no match: `mkdir -p` the category dir and write a new file, `date` set, the PR
-  ref the only line under `## Related Issues`, no `last_refreshed`.
-- match: append the PR ref under `## Related Issues`, set `last_refreshed` to
-  today, and add detail only if this occurrence teaches something new.
+- no match: `mkdir -p` the category dir and write a new file with `date` set, the
+  PR ref as the only entry under `## Related Issues` and in `related_pr`, and no
+  `last_refreshed`.
+- match: append the PR ref under `## Related Issues` and to `related_pr`, set
+  `last_refreshed` to today, and add detail only if this occurrence teaches
+  something new.
 
 Capture is the only path by which a new learning ENTERS the store, and its input
 is the registry's real recorded findings, never one you imagine could happen. The
