@@ -23,8 +23,8 @@ than none, because it routes noise into every future contract.
 
 The store is `docs/solutions/` at the repo root, compatible with Compound
 Engineering's format so the same files are readable by either toolchain.
-"Compatible" means a file maestro writes is a valid CE solution file and a CE
-solution file is one maestro can read; it does not mean CE follows its own
+"Compatible" means a file maestro writes is a CE solution file its tooling reads
+and a CE solution file is one maestro can read; it does not mean CE follows its own
 declared schema perfectly (CE declares a `component` enum it does not enforce,
 and its real store uses far fewer category dirs than its declared map). No new
 standard and no index file: discovery is grep over frontmatter, and the
@@ -58,10 +58,11 @@ root_cause: <one line: the underlying cause, not the symptom>
 resolution_type: <free-form CE class, e.g. code_fix, test_fix, config_change>
 severity: critical|high|medium|low
 tags: [kebab, keywords, for, grep]
-# refresh-maintenance fields, written by capture only when the defect recurs:
-last_refreshed: 2026-06-28   # set on every recurrence
+# maintenance fields: last_refreshed is recurrence-only; related_pr mirrors
+# ## Related Issues from first capture on; related holds solution cross-links:
+last_refreshed: 2026-06-28   # set only on recurrence
 related: [other-solution-slugs]   # cross-links to related learnings, not PRs
-related_pr: [pr-refs]        # frontmatter mirror of ## Related Issues, for grep
+related_pr: [pr-refs]        # mirror of ## Related Issues, from first capture
 ---
 
 # One-line defect title
