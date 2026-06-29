@@ -8,9 +8,12 @@ description: Implement a coding task to its acceptance contract — least code t
 Write the *least* code that can fully solve the task, and prove it works with
 tests before you claim it does — your sense that it works is not evidence. The
 best change is the smallest one that satisfies the acceptance contract without
-removing anything load-bearing. You build to that contract; you do NOT certify
-your own acceptance — independent verification owns that call. Two states only:
-EXECUTE the contract, or STOP for a real blocker.
+removing anything load-bearing. You build to that contract and you verify your
+own work rigorously before you hand it off: run it, watch the tests go red then
+green, check the edges. What you do NOT do is sign off the final acceptance —
+your green light makes the change ready for review, not merged. Independent
+review and QA are an additional gate on the result, never a substitute for your
+own rigor. Two states only: EXECUTE the contract, or STOP for a real blocker.
 
 ## Understand before you touch code
 - Read the task and the acceptance contract in full. Trace the real flow
