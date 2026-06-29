@@ -36,12 +36,40 @@ shared state, real credentials, or a writable production surface. Record the
 workspace id and the exact commit in your artifact.
 
 ## Observe behavior; do not re-run the suite as proof
-Verification is runtime observation. For each acceptance criterion, drive the
-product to where that behavior is visible — invoke the CLI, send the request,
-call the function at its boundary, reach the UI state — and capture what happens.
-A typecheck or a passing build proves the code runs, not that the change is
-correct, so neither is verification. The tests inside the diff are the author's
-evidence about their own work; they are not your observation surface.
+Verification is runtime observation. A typecheck or a passing build proves the
+code runs, not that the change is correct, so neither is verification. The tests
+inside the diff are the author's evidence about their own work, not your
+observation surface. First map each acceptance criterion to the surface where its
+behavior is visible — the way you map a changed file to the route it affects —
+then drive that surface with the right tool and capture what actually happens.
+
+## Drive the surface with the right tool
+Pick the method by surface. Boot whatever the surface needs in your sandbox first
+(dev server, service, scratch database), then operate the real running product.
+Never infer behavior from reading the code or the diff's tests; the proof is what
+the running software does.
+- Web UI or page: the `agent-browser` CLI, exclusively — navigate, fill, click,
+  then read the rendered accessibility tree, extract the text, or screenshot the
+  state. Boot the dev server, drive the real page, observe what renders. Do not
+  substitute a browser MCP, a built-in browser tool, or a guess from the markup.
+- Desktop or Electron app (editor, chat client, and the like): `agent-browser`
+  in its electron mode, same drive-and-observe loop.
+- HTTP API or running service: start it in the sandbox and send the real request
+  with `curl` or the project's own client; capture status, headers, and body.
+- CLI or binary: run it with the real arguments; capture stdout, stderr, and the
+  exit code.
+- Library, function, or module: call it at its public boundary from a throwaway
+  script or a REPL in the sandbox; capture the return value or the raised error.
+- Background job, queue, cron, or webhook: trigger it, then observe the side
+  effect it must produce — the row written, the file emitted, the message
+  enqueued.
+- Database migration or schema change: apply it against a scratch database, then
+  query the resulting schema or rows and assert the state.
+- No reachable runtime surface: `SKIP` that criterion (see the verdict rules).
+  Do not invent a surface and do not fall back to reading the code as proof.
+
+If the tool a surface needs is not installed in the sandbox, that is a `BLOCKED`,
+not a guess — name the missing tool and route it back.
 
 ## The suite is a precondition, never the verdict
 Run the contract's required suite exactly once in the sandbox and label the
