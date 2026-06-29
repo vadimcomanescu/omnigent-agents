@@ -53,7 +53,8 @@ the running software does.
   state. Boot the dev server, drive the real page, observe what renders. Do not
   substitute a browser MCP, a built-in browser tool, or a guess from the markup.
 - Desktop or Electron app (editor, chat client, and the like): `agent-browser`
-  in its electron mode, same drive-and-observe loop.
+  in its electron mode, exclusively — same drive-and-observe loop, and the same
+  prohibition on browser MCPs and built-in browser tools.
 - HTTP API or running service: start it in the sandbox and send the real request
   with `curl` or the project's own client; capture status, headers, and body.
 - CLI or binary: run it with the real arguments; capture stdout, stderr, and the
