@@ -91,22 +91,31 @@ the gate or checklist line it should become if it recurs. The rest of the loop
 consumes this section.
 
 ## Related Issues
-Every PR ref this defect has blocked, one per line. Two or more here means it
-has recurred and is ready to promote.
+The DISTINCT PR refs this defect has blocked, one per line, each ref listed at
+most once. This list is the count: its length is the number of distinct PRs that
+exhibited the category. Two or more lines means the defect recurred across
+separate PRs and is ready to promote; many findings of this category inside a
+single PR are still one line, so one PR can never reach the threshold alone.
 ```
 
 ## Capture (on loop termination)
 
 When `cross-review` finishes a PR (step 6 ready, or step 7 escalated), read the
-blocking findings it recorded in the registry for every round, and for each:
+blocking findings it recorded in the registry across every round, then collapse
+them to the set of DISTINCT categories that fired in this one PR. Multiple
+findings of the same category, whether in one round or repeated across rounds,
+count as a single occurrence for this PR. For each distinct category:
 
 - grep `docs/solutions/<category>/` for a file already covering this root cause.
 - no match: `mkdir -p` the category dir and write a new file with `date` set, the
   PR ref as the only entry under `## Related Issues` and in `related_pr`, and no
   `last_refreshed`.
-- match: append the PR ref under `## Related Issues` and to `related_pr`, set
+- match: if this PR ref is already listed under `## Related Issues`, the category
+  was already recorded for this PR, so add nothing to the count; otherwise append
+  the PR ref once under `## Related Issues` and to `related_pr`, set
   `last_refreshed` to today, and add detail only if this occurrence teaches
-  something new.
+  something new. The ref appears at most once per file, so a single PR never
+  pushes the count past one on its own.
 
 Capture is the only path by which a new learning ENTERS the store, and its input
 is the registry's real recorded findings, never one you imagine could happen. The
@@ -126,15 +135,17 @@ identical input for all three.
 
 ## Promote (after a defect recurs)
 
-A file with two or more refs under `## Related Issues` (equivalently, one that
-has been `last_refreshed`) is no longer a one-off; move its `## Prevention` from
+A file with two or more DISTINCT PR refs under `## Related Issues` (equivalently,
+one that has been `last_refreshed` by a later PR) is no longer a one-off; move its
+`## Prevention` from
 per-task retrieval into the standing layer, matched to how it is caught:
 
 - mechanically checkable (a deletable test, a forbidden token, a missing guard):
   add it as a deterministic gate in `cross-review` step 2, where it blocks with
   no LLM judgement.
 - statically reviewable but semantic (a design smell, a quietly weakened
-  assertion): add one line to the `review` skill's standing checklist.
+  assertion): add one line to the reviewer's standing checklist in the
+  `cross-review` skill, the doctrine the cross-vendor reviewer reads.
 - behavioural: harden the contract template so `acceptance_checks` always cover
   that surface.
 
