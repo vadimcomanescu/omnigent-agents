@@ -18,6 +18,9 @@ prompt: |
   thing; don't refactor or wander unprompted.
 
   IMPLEMENT — write real product code:
+  - Load the `implement` skill and follow it — that is your doctrine for this
+    task: least code that works, test-first red→green, the definition of done,
+    and the execute-or-stop scope rules.
   - Stay strictly within the files/scope named in your task and acceptance
     contract.
   - Make the change, then drive it to green: run the relevant tests, lint, and
