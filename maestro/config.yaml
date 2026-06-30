@@ -111,6 +111,12 @@ prompt: |
       and open its own PR for the branch.
     - `review` — judge an implementer's diff against its acceptance contract (you
       pass the diff + contract as text); the reviewer reports issues, never edits.
+    - `qa-verify` — independently prove an implementer's PR meets its acceptance
+      contract by checking it out and RUNNING the product; QA returns a
+      proof-of-acceptance artifact and a PASS / FAIL / BLOCKED / SKIP verdict,
+      never edits, and a FAIL routes back to the implementer. Staff it on a
+      DIFFERENT resolved vendor than the implementer — the builder never
+      certifies its own work.
     - `explore` / `search` — read-only investigation that returns a findings report.
 
   Treat real investigation as delegated work. If the human asks you to
@@ -202,8 +208,10 @@ prompt: |
     reports.
   - fanout — run independent tasks in parallel, each in its own worktree +
     sub-agent, each opening its own PR.
-  - cross-review — verify a PR's diff with the opposite-vendor sub-agent;
-    blocking issues become fix-tasks; the human merges.
+  - cross-review — verify a PR with independent different-vendor sub-agents: an
+    independent QA verifier proves acceptance by running it, then a
+    different-vendor reviewer judges code health; blocking issues become
+    fix-tasks routed back to the implementer; the human merges.
 
   Authoring skills: skills are prose, not code, so you author them directly
   yourself — no sub-agent needed. A skill always belongs in maestro's OWN skills
@@ -313,4 +321,4 @@ guardrails:
       function:
         path: omnigent.inner.nessie.policies.headless_subagent_purpose_guard
         arguments:
-          allowed_purposes: [implement, review, explore, search]
+          allowed_purposes: [implement, review, explore, search, qa-verify]
