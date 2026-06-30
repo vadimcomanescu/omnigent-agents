@@ -21,8 +21,9 @@ anyone needs to read through.
    `review-auth-refactor`, never the raw vendor name:
    `sys_session_send(agent="claude_code"|"codex"|"pi", title="review-<task_slug>",
    args={purpose: "review", input: "<the diff> + <the acceptance contract>.
-   Review ONLY against the contract. Report blocking / non-blocking /
-   suggestions. Do not edit code."})`. Give it the diff as text — do NOT point
+   Review ONLY against the contract. Label each finding critical / major /
+   minor / nit; do not declare what blocks. Do not edit code."})`. Give it the
+   diff as text — do NOT point
    it at the implementer's worktree. Fetch the diff and emit the
    `sys_session_send` call in the SAME turn you decide to review — never end a
    turn having only announced "I'll load cross-review and fetch the diff" with
@@ -32,8 +33,12 @@ anyone needs to read through.
    returns. Use `sys_session_get_history` only to debug an empty or unclear
    review result.
 4. The reviewer SURFACES issues; it does not fix them.
-5. For each **blocking** issue: add a fix-task to the registry scoped to the
-   same worktree, and send the concrete fixes back to the SAME implementer
+5. A finding BLOCKS iff its severity is critical or major; minor and nit never
+   block and are never escalated to force a fix. Compute the blocking set from
+   the reviewer's severity labels (the reviewer labels, it never declares
+   blocking; maestro gates). For each blocking finding: add a fix-task to the
+   registry scoped to the same worktree, and send the concrete fixes back to the
+   SAME implementer
    conversation via `sys_session_send` — reuse the original implementer's
    `agent` + `title` (or address it by `session_id`) with
    `purpose: "implement"`, so the worker keeps its worktree/branch context and
