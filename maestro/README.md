@@ -27,8 +27,8 @@ one-line change — is delegated to a sub-agent.
 
 ## Skills
 
-`maestro:fanout`, `maestro:cross-review`, `maestro:investigate` (namespaced by
-the bundle `name:`).
+`maestro:planning`, `maestro:fanout`, `maestro:cross-review`,
+`maestro:investigate` (namespaced by the bundle `name:`).
 
 ## Run
 

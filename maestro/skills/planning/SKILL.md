@@ -103,8 +103,19 @@ unit's contract MUST be judgeable from the diff alone and MUST state:
 
 Group units into execution **waves**: every unit in a wave has all its
 dependencies satisfied by earlier waves and shares no files with its
-wave-mates. Wave N is the `fanout` batch; Wave N+1 starts after N's PRs are
-cross-reviewed. State the critical path so the human sees the longest chain.
+wave-mates. Wave N is the `fanout` batch. State the critical path so the human
+sees the longest chain.
+
+**The wave gate is merge, not review.** `fanout` branches every worktree fresh
+from the current base, and maestro never merges — the human does. So a wave's
+code only becomes a usable base for the units that depend on it once the human
+has **merged** that wave's PRs. Therefore dispatch a unit only after every
+wave it depends on has been cross-reviewed **and merged/adopted into the
+base** — not merely cross-reviewed. Dispatching a dependent wave off review
+alone leaves its implementers branching without the prerequisite code, so they
+fail to build against missing interfaces or duplicate the earlier PR. Units
+with no cross-wave dependency may still run concurrently: it is the dependency
+edge, not the wave number, that forces the wait.
 
 ### Phase 5 — Right-size and confidence-check
 
