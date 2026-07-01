@@ -136,11 +136,23 @@ scope" section rather than smuggling it into a unit.
 
 ### Phase 6 — Human plan gate
 
-Write the plan to `.maestro/registry.json` (units, U-IDs, contracts, file sets,
-waves, deps) and present it to the human. **Stop here.** Do not dispatch
-implementers until the human approves scope and decomposition. On approval,
-hand off to `fanout` (one worktree + implementer + PR per unit) then
-`cross-review` (different-vendor verification); the human merges.
+Produce two artifacts for two audiences — never conflate them:
+
+- **Machine state (for fanout, not for humans).** Write the structured plan —
+  units, U-IDs, contracts, file sets, waves, deps — to `.maestro/registry.json`.
+  This is `fanout`'s input; no human is asked to read it.
+- **Human-readable plan (for the gate).** Render the same plan as prose the
+  human actually reads: a Markdown `PLAN.md` by default (renders in GitHub and
+  editors, diffs cleanly, pastes into a PR), or a standalone HTML file when the
+  plan is large enough to benefit from a dependency diagram, collapsible waves,
+  or side-by-side unit contracts. maestro authors this rendering directly —
+  prose is its own work. **Never present the raw registry JSON as the thing to
+  read;** humans read Markdown or HTML, not machine state.
+
+Present the human-readable plan and **stop here.** Do not dispatch implementers
+until the human approves scope and decomposition. On approval, hand off to
+`fanout` (one worktree + implementer + PR per unit) then `cross-review`
+(different-vendor verification); the human merges.
 
 ## Unit template
 
@@ -190,6 +202,8 @@ Open Qs:     <implementation-time unknowns left to the implementer>
 - Smuggling scope creep into a unit instead of deferring it to "Later".
 - Embedding full implementation code in the plan.
 - Dispatching implementers before the human approves the plan gate.
+- Presenting the raw `.maestro/registry.json` at the human gate instead of a
+  rendered Markdown or HTML plan a human will actually read.
 
 ## Done checklist
 
@@ -201,5 +215,6 @@ Open Qs:     <implementation-time unknowns left to the implementer>
       scenarios, verify commands, out-of-scope).
 - [ ] Units ordered into dependency-correct waves; critical path stated.
 - [ ] Riskiest units deepened; planning-time unknowns resolved.
-- [ ] Plan written to `.maestro/registry.json` and presented at the human gate
-      — no implementers dispatched yet.
+- [ ] Machine state written to `.maestro/registry.json`; a human-readable plan
+      (Markdown by default, HTML for large plans) rendered and presented at the
+      gate — no implementers dispatched yet.
