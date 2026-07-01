@@ -70,11 +70,15 @@ can pass one and fail the other, so both gate the merge.
    blocking findings from each round. Recording the vendors and findings is what
    keeps the cross-vendor independence auditable: if one vendor never catches
    what another does, the registry is where that shows up. Leave it for the human
-   to merge. maestro does NOT merge it.
+   to merge. maestro does NOT merge it. Then load the `compound` skill to capture
+   this loop's blocking findings (from every round) into the learnings store, so
+   the same defect becomes a trap in the next contract.
 7. Cap the loop at three cycles. If blocking items still stand, STOP and escalate
    to the human with the QA artifact and the open review findings. If a finding
    shows the contract itself is the defect, reopen the contract rather than
-   grinding code against a broken spec.
+   grinding code against a broken spec. Capture the blocking findings into the
+   learnings store with `compound` even on escalation; an unresolved blocking
+   defect is exactly what is worth learning from.
 
 ## Notes
 - **The contract is the one maestro authored at dispatch** (its full schema
