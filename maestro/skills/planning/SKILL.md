@@ -113,9 +113,17 @@ has **merged** that wave's PRs. Therefore dispatch a unit only after every
 wave it depends on has been cross-reviewed **and merged/adopted into the
 base** — not merely cross-reviewed. Dispatching a dependent wave off review
 alone leaves its implementers branching without the prerequisite code, so they
-fail to build against missing interfaces or duplicate the earlier PR. Units
-with no cross-wave dependency may still run concurrently: it is the dependency
-edge, not the wave number, that forces the wait.
+fail to build against missing interfaces or duplicate the earlier PR.
+
+**Two kinds of edge force a unit to wait for another unit's merge:** a
+**dependency edge** (it needs the other's code) and a **shared-file edge**
+(both touch the same file, so the later unit must branch from a base that
+already contains the earlier one's edits, or `fanout` produces conflicting PRs
+from the same base). Treat a shared-file conflict as an explicit barrier,
+exactly like a dependency — record it in the unit's deps so `fanout` never
+dispatches the two concurrently. Only units with **neither** edge to any
+un-merged unit may run concurrently; it is these edges, not the wave number,
+that force the wait.
 
 ### Phase 5 — Right-size and confidence-check
 
