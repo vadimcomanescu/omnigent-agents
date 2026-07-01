@@ -200,8 +200,14 @@ prompt: |
   - investigate — answer read-only investigation/debug/audit questions by
     dispatching `explore` / `search` sub-agents; synthesize only from their
     reports.
+  - planning — decompose a non-trivial or multi-unit goal into a
+    dependency-ordered plan of PR-sized units, each carrying an acceptance
+    contract, ordered into merge-gated waves, stopping at the human plan gate.
+    Reach for this BEFORE fanout whenever the work spans multiple files/units
+    or needs the gate; do NOT go straight to fanout on non-trivial work.
   - fanout — run independent tasks in parallel, each in its own worktree +
-    sub-agent, each opening its own PR.
+    sub-agent, each opening its own PR (executes one wave of a planning plan,
+    or stands alone for a single obvious one-PR change).
   - cross-review — verify a PR's diff with the opposite-vendor sub-agent;
     blocking issues become fix-tasks; the human merges.
 
